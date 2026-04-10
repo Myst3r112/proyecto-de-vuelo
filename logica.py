@@ -1,5 +1,8 @@
 import numpy as np
 import random
+import base64
+from graphviz import Digraph
+
 paises = [
     "Perú", "Chile", "Argentina", "Brasil",
     "Colombia", "México", "Ecuador", "Bolivia",
@@ -17,10 +20,6 @@ def validar_origen_destino(origen, destino):
         return False, "Destino no válido"
     return True, ""
     
-
-def crear_matriz():
-    return np.zeros((len(paises),len(paises)), dtype=int)    
-
 def agregar_ruta(matriz, origen, destino):
     valido, _ = validar_origen_destino(origen, destino)
     if not valido:
@@ -33,18 +32,18 @@ def agregar_ruta(matriz, origen, destino):
         return False
 
     matriz[i][j] = 1
+    matriz[j][i] = 1
     return True
 
-def generar_matriz_aleatoria(n, probabilidad=0.3):
+def generar_matriz_aleatoria(n, probabilidad=0.1):
     m = np.zeros((n, n), dtype=int)
-    
+
     for i in range(n):
-        for j in range(n):
-            if i != j:  # evitar país consigo mismo
-                if random.random() < probabilidad:
-                    m[i][j] = 1
-                    m[j][i] = 1
-                    
+        for j in range(i + 1, n):
+            if random.random() <= probabilidad:
+                m[i][j] = 1
+                m[j][i] = 1
+
     return m
 
 def calcular_conectividad(matriz):
@@ -100,3 +99,32 @@ def rutas_dos_escalas(A, origen, destino):
                 rutas.append([origen, escala1, escala2, destino])
 
     return rutas
+
+def dibujar_grafo(ruta, contenedor):
+    dot = Digraph()
+    dot.attr(rankdir="TB")
+    dot.attr("edge", color="gray50", penwidth="1.8")
+    dot.attr(
+        "node",
+        shape="circle",
+        width="0.22",
+        height="0.22",
+        fixedsize="true",
+        style="filled",
+        fillcolor="#4DA6FF",
+        color="#4DA6FF",
+        label=""
+    )
+
+    for i, pais in enumerate(ruta):
+        dot.node(f"n{i}", xlabel=pais)
+
+    for i in range(len(ruta) - 1):
+        dot.edge(f"n{i}", f"n{i+1}")
+
+    contenedor.graphviz_chart(dot)
+
+def cargar_imagen(ruta):
+    with open(ruta, "rb") as f:
+        data = f.read()
+        return base64.b64encode(data).decode()
