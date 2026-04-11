@@ -1,6 +1,8 @@
 import numpy as np
 import random
 import base64
+import pandas as pd
+import pydeck as pdk
 from graphviz import Digraph
 
 paises = [
@@ -35,7 +37,7 @@ def agregar_ruta(matriz, origen, destino):
     matriz[j][i] = 1
     return True
 
-def generar_matriz_aleatoria(n, probabilidad=0.1):
+def generar_matriz_aleatoria(n, probabilidad=0.25):
     m = np.zeros((n, n), dtype=int)
 
     for i in range(n):
@@ -102,22 +104,37 @@ def rutas_dos_escalas(A, origen, destino):
 
 def dibujar_grafo(ruta, contenedor):
     dot = Digraph()
+
     dot.attr(rankdir="TB")
-    dot.attr("edge", color="gray50", penwidth="1.8")
-    dot.attr(
-        "node",
-        shape="circle",
-        width="0.22",
-        height="0.22",
-        fixedsize="true",
-        style="filled",
-        fillcolor="#4DA6FF",
-        color="#4DA6FF",
-        label=""
-    )
+
+    dot.attr(ranksep="0.6")
+    dot.attr(nodesep="0.4")
+
+    dot.attr("edge", color="#7A7A7A", penwidth="1.8", arrowsize="0.5")
 
     for i, pais in enumerate(ruta):
-        dot.node(f"n{i}", xlabel=pais)
+        nombre_nodo = f"n{i}"
+
+        if i == 0:
+            color = "#2E8B57"
+        elif i == len(ruta) - 1:
+            color = "#D94B4B"
+        else:
+            color = "#4DA6FF"
+
+        dot.node(
+            nombre_nodo,
+            label="",
+            xlabel=pais,
+            shape="circle",
+            width="0.35",
+            height="0.35",
+            fixedsize="true",
+            style="filled",
+            fillcolor=color,
+            color=color,
+            fontname="Helvetica"
+        )
 
     for i in range(len(ruta) - 1):
         dot.edge(f"n{i}", f"n{i+1}")
@@ -128,3 +145,100 @@ def cargar_imagen(ruta):
     with open(ruta, "rb") as f:
         data = f.read()
         return base64.b64encode(data).decode()
+    
+def cargar_coordenadas(ruta_csv):
+    df = pd.read_csv(ruta_csv)
+
+    return {
+        fila["pais"]: (fila["longitud"], fila["latitud"])
+        for _, fila in df.iterrows()
+    }
+ 
+def interpolar_color(t):
+    """
+    t va de 0 a 1
+    0 = verde, 1 = rojo
+    """
+    r = int(46 + (217 - 46) * t)
+    g = int(139 + (75 - 139) * t)
+    b = int(87 + (75 - 87) * t)
+    return [r, g, b]
+
+def dibujar_mapa(ruta, contenedor, coordenadas):
+    lineas = []
+    puntos = []
+
+    n = len(ruta)
+
+    colores_nodos = []
+    if n == 1:
+        colores_nodos = [[46, 139, 87]]
+    else:
+        for i in range(n):
+            t = i / (n - 1)
+            colores_nodos.append(interpolar_color(t))
+
+    # Puntos del mapa
+    for i, pais in enumerate(ruta):
+        lon, lat = coordenadas[pais]
+        puntos.append({
+            "pais": pais,
+            "lon": lon,
+            "lat": lat,
+            "color": colores_nodos[i]
+        })
+
+    # Tramos con degradado continuo por segmentos
+    for i in range(n - 1):
+        origen = coordenadas[ruta[i]]
+        destino = coordenadas[ruta[i + 1]]
+
+        lineas.append({
+            "from": origen,
+            "to": destino,
+            "source_color": colores_nodos[i],
+            "target_color": colores_nodos[i + 1]
+        })
+
+    capa_lineas = pdk.Layer(
+        "ArcLayer",
+        data=lineas,
+        get_source_position="from",
+        get_target_position="to",
+        get_source_color="source_color",
+        get_target_color="target_color",
+        get_width=4,
+    )
+
+    capa_puntos = pdk.Layer(
+        "ScatterplotLayer",
+        data=puntos,
+        get_position='[lon, lat]',
+        get_fill_color='color',
+        get_radius=100000,
+        pickable=True,
+    )
+
+    lats = [coordenadas[p][1] for p in ruta]
+    lons = [coordenadas[p][0] for p in ruta]
+
+    lat_centro = sum(lats) / len(lats)
+    lon_centro = sum(lons) / len(lons)
+
+    vista = pdk.ViewState(
+        latitude=lat_centro,
+        longitude=lon_centro,
+        zoom=4
+    )
+
+    mapa = pdk.Deck(
+        layers=[capa_lineas, capa_puntos],
+        initial_view_state=vista,
+        map_style="light",
+        tooltip={
+        "html": "<b>{pais}</b>",
+        "style": {"color": "white"}
+}
+    )
+
+    contenedor.pydeck_chart(mapa, height=400)
