@@ -1,5 +1,16 @@
+'''
+Para poder usar este programa debe instalar las librerias requeridas, ingrese este comando en la consola:
+pip install -r requerimientos.txt
+
+Una vez instalado los modulos, para ejecutar el programa solo coloque en consola:
+streamlit run app.py
+
+Recuerde utilizar el mismo interprete de Pyhon con el que se instalaron las librerias para evitar
+errores de modulos no encontrados
+'Ctrl + Shift + P' y seleccionar 'select interpreter' para verificar o corregir este error de modulo
+'''
 import numpy as np
-import random
+from  random import random 
 import base64
 import pandas as pd
 import pydeck as pdk
@@ -11,105 +22,119 @@ paises = [
     "Paraguay", "Uruguay", "Panamá", "Costa Rica"
 ]
 
-indice_paises = {pais: idx for idx, pais in enumerate(paises)}
+def generar_matriz_aleatoria(dimension, probabilidad=0.25):
+    matriz = np.zeros((dimension, dimension), dtype=int)
+            
+    for i in range(dimension):
+        for j in range(dimension):
+            if random() <= probabilidad:
+                matriz[i][j] = 1
+                matriz[j][i] = 1
+    np.fill_diagonal(matriz, 0)
+    return matriz
 
 def validar_origen_destino(origen, destino):
     if origen == destino:
-        return False, "No se puede usar el mismo país"
-    elif origen not in indice_paises:
-        return False, "Origen no válido"
-    elif destino not in indice_paises:
-        return False, "Destino no válido"
+        return False, "No se puede usar el mismo pais como origen y destino"
     return True, ""
-    
+
 def agregar_ruta(matriz, origen, destino):
-    valido, _ = validar_origen_destino(origen, destino)
-    if not valido:
-        return False
+    valido, i = validar_origen_destino(origen, destino)
+    if not valido: return False
 
-    i = indice_paises[origen]
-    j = indice_paises[destino]
-
-    if matriz[i][j] == 1:
-        return False
+    i = paises.index(origen)
+    j = paises.index(destino)
+    if matriz[i][j] == 1: return False
 
     matriz[i][j] = 1
     matriz[j][i] = 1
     return True
 
-def generar_matriz_aleatoria(n, probabilidad=0.25):
-    m = np.zeros((n, n), dtype=int)
+def producto_booleano(matriz_a, matriz_b):
+    matriz_a = np.array(matriz_a, dtype=int)
+    matriz_b = np.array(matriz_b, dtype=int)
 
-    for i in range(n):
-        for j in range(i + 1, n):
-            if random.random() <= probabilidad:
-                m[i][j] = 1
-                m[j][i] = 1
+    filas = matriz_a.shape[0]
+    columnas = matriz_b.shape[1]
+    intermedios = matriz_a.shape[1]
 
-    return m
+    resultado = np.zeros((filas, columnas), dtype=int)
+
+    for i in range(filas):
+        for j in range(columnas):
+            for k in range(intermedios):
+                if matriz_a[i][k] == 1 and matriz_b[k][j] == 1:
+                    resultado[i][j] = 1
+                    break
+    return resultado
 
 def calcular_conectividad(matriz):
-    A = matriz
-    A2 = np.dot(A, A)
-    A3 = np.dot(A2, A)
-    
-    return A, A2, A3
+    A = np.array(matriz, dtype=int).copy()
+    np.fill_diagonal(A, 0)
+    A2 = producto_booleano(A, A)
+    np.fill_diagonal(A2, 0)
+    A3 = producto_booleano(A2, A)
+    np.fill_diagonal(A3, 0)
 
-def hay_conexion(matriz_k, origen, destino):
-    valido, _ = validar_origen_destino(origen, destino)
-    if not valido:
-        return False
+    return A, A2 , A3
 
-    i = indice_paises[origen]
-    j = indice_paises[destino]
-    return matriz_k[i][j] > 0
+def analizar_conectividad_matricial(matriz, origen, destino):
+    A, A2, A3 = calcular_conectividad(matriz)
 
-def rutas_directas(A, origen, destino):
-    if hay_conexion(A, origen, destino):
-        return [[origen, destino]]
+    i = paises.index(origen)
+    j = paises.index(destino)
+
+    directa = A[i][j] == 1
+    una_escala = A2[i][j] == 1
+    dos_escalas = A3[i][j] == 1
+
+    return {
+        "A" : A,
+        "A2" : A2,
+        "A3" : A3,
+        "directa" :directa,
+        "una_escala" : una_escala,
+        "dos_escalas" : dos_escalas,
+        "hay_conectividad" : directa or una_escala or dos_escalas
+    }
+
+def rutas_directas(matriz, origen, destino):
+    i = paises.index(origen)
+    j = paises.index(destino)
+
+    if matriz[i][j] == 1: return[[origen, destino]]
     return []
 
-def rutas_una_escala(A, origen, destino):
+def rutas_una_escala(matriz, origen, destino):
     rutas = []
-    i = indice_paises[origen]
-    j = indice_paises[destino]
+    i = paises.index(origen)
+    j = paises.index(destino)
 
-    for k in range(len(paises)):
-        escala = paises[k]
-
-        if escala != origen and escala != destino:
-            if A[i][k] > 0 and A[k][j] > 0:
-                rutas.append([origen, escala, destino])
-
+    for k, escala in enumerate(paises):
+        if escala in (origen, destino): continue
+        if matriz[i][k] == 1 and matriz[k][j] == 1:
+            rutas.append([origen, escala, destino])
+    
     return rutas
-
-def rutas_dos_escalas(A, origen, destino):
+    
+def rutas_dos_escalas(matriz, origen, destino):
     rutas = []
-    i = indice_paises[origen]
-    j = indice_paises[destino]
+    i = paises.index(origen)
+    j = paises.index(destino)
 
-    for k in range(len(paises)):
-        for l in range(len(paises)):
-
-            escala1 = paises[k]
-            escala2 = paises[l]
-
-            if len({origen, escala1, escala2, destino}) < 4:
-                continue
-
-            if A[i][k] > 0 and A[k][l] > 0 and A[l][j] > 0:
+    for k, escala1 in enumerate(paises):
+        for l, escala2 in enumerate(paises):
+            if len({origen, escala1, escala2, destino}) != 4: continue
+            if matriz[i][k] == 1 and matriz[k][l] == 1 and matriz[l][j] == 1:
                 rutas.append([origen, escala1, escala2, destino])
-
+    
     return rutas
+
 
 def dibujar_grafo(ruta, contenedor):
     dot = Digraph()
-
     dot.attr(rankdir="TB")
-
     dot.attr(ranksep="0.6")
-    dot.attr(nodesep="0.4")
-
     dot.attr("edge", color="#7A7A7A", penwidth="1.8", arrowsize="0.5")
 
     for i, pais in enumerate(ruta):
@@ -132,33 +157,27 @@ def dibujar_grafo(ruta, contenedor):
             fixedsize="true",
             style="filled",
             fillcolor=color,
-            color=color,
-            fontname="Helvetica"
+            color="#7A7A7A"
         )
 
     for i in range(len(ruta) - 1):
-        dot.edge(f"n{i}", f"n{i+1}")
+        dot.edge(f"n{i}", f"n{i + 1}")
 
     contenedor.graphviz_chart(dot)
 
 def cargar_imagen(ruta):
-    with open(ruta, "rb") as f:
-        data = f.read()
-        return base64.b64encode(data).decode()
-    
+    with open(ruta, "rb") as archivo:
+        data = archivo.read()
+    return base64.b64encode(data).decode()
+
 def cargar_coordenadas(ruta_csv):
     df = pd.read_csv(ruta_csv)
 
     return {
-        fila["pais"]: (fila["longitud"], fila["latitud"])
-        for _, fila in df.iterrows()
+        fila["pais"]: (fila["longitud"], fila["latitud"]) for _, fila in df.iterrows()
     }
- 
+
 def interpolar_color(t):
-    """
-    t va de 0 a 1
-    0 = verde, 1 = rojo
-    """
     r = int(46 + (217 - 46) * t)
     g = int(139 + (75 - 139) * t)
     b = int(87 + (75 - 87) * t)
@@ -167,37 +186,31 @@ def interpolar_color(t):
 def dibujar_mapa(ruta, contenedor, coordenadas):
     lineas = []
     puntos = []
-
-    n = len(ruta)
+    distancia = len(ruta)
 
     colores_nodos = []
-    if n == 1:
-        colores_nodos = [[46, 139, 87]]
-    else:
-        for i in range(n):
-            t = i / (n - 1)
-            colores_nodos.append(interpolar_color(t))
-
-    # Puntos del mapa
+    for i in range(distancia):
+        t = 0 if distancia == 1 else i / (distancia - 1)
+        colores_nodos.append(interpolar_color(t))
+    
     for i, pais in enumerate(ruta):
-        lon, lat = coordenadas[pais]
+        longitud, latitud = coordenadas[pais]
         puntos.append({
             "pais": pais,
-            "lon": lon,
-            "lat": lat,
+            "longitud": longitud,
+            "latitud": latitud,
             "color": colores_nodos[i]
         })
 
-    # Tramos con degradado continuo por segmentos
-    for i in range(n - 1):
-        origen = coordenadas[ruta[i]]
-        destino = coordenadas[ruta[i + 1]]
+    for j in range(distancia - 1):
+        origen = coordenadas[ruta[j]]
+        destino = coordenadas[ruta[j + 1]]
 
         lineas.append({
             "from": origen,
             "to": destino,
-            "source_color": colores_nodos[i],
-            "target_color": colores_nodos[i + 1]
+            "source_color": colores_nodos[j],
+            "target_color": colores_nodos[j + 1]
         })
 
     capa_lineas = pdk.Layer(
@@ -213,32 +226,29 @@ def dibujar_mapa(ruta, contenedor, coordenadas):
     capa_puntos = pdk.Layer(
         "ScatterplotLayer",
         data=puntos,
-        get_position='[lon, lat]',
-        get_fill_color='color',
+        get_position="[longitud, latitud]",
+        get_fill_color="color",
         get_radius=100000,
         pickable=True,
     )
 
-    lats = [coordenadas[p][1] for p in ruta]
-    lons = [coordenadas[p][0] for p in ruta]
-
-    lat_centro = sum(lats) / len(lats)
-    lon_centro = sum(lons) / len(lons)
+    latitudes = [coordenadas[pais][1] for pais in ruta]
+    longitudes = [coordenadas[pais][0] for pais in ruta]
 
     vista = pdk.ViewState(
-        latitude=lat_centro,
-        longitude=lon_centro,
-        zoom=4
+        latitude = sum(latitudes) / len(latitudes),
+        longitude = sum(longitudes) / len(longitudes),
+        zoom = 3
     )
 
     mapa = pdk.Deck(
         layers=[capa_lineas, capa_puntos],
         initial_view_state=vista,
-        map_style="light",
+        map_style="dark",
         tooltip={
-        "html": "<b>{pais}</b>",
-        "style": {"color": "white"}
-}
+            "html": "<b>{pais}</b>",
+            "style": {"color": "white"}
+        }
     )
 
-    contenedor.pydeck_chart(mapa, height=400)
+    contenedor.pydeck_chart(mapa, height=500)
