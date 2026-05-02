@@ -1,6 +1,6 @@
 '''
 Para poder usar este programa debe instalar las librerias requeridas, ingrese este comando en la consola:
-pip install -r requerimientos.txt
+pip install -r requirements.txt
 
 Una vez instalado los modulos, para ejecutar el programa solo coloque en consola:
 streamlit run app.py
