@@ -33,7 +33,6 @@ def aplicar_estilos():
 
 def mostrar_encabezado():
     fondo = cargar_imagen("imagen/fondo.png")
-
     st.markdown(
         f"""
         <div style="
@@ -59,7 +58,7 @@ def mostrar_encabezado():
 
 def inicializar_estado():
     if "matriz" not in st.session_state:
-        st.session_state.matriz = generar_matriz_aleatoria(len(paises))
+        st.session_state.matriz = crear_matriz(len(paises))
 
     if "resultado_busqueda" not in st.session_state:
         st.session_state.resultado_busqueda = None
@@ -118,7 +117,7 @@ def mostrar_resultados(resultado):
     )
 
     if not analisis["hay_conectividad"]:
-        st.info("Según la matriz A, A² y A³, no existe conectividad entre estos países hasta dos escalas.")
+        st.info("No se encontraron rutas disponibles entre estos países hasta 2 escalas.")
         return
 
     mostrar_botones_rutas("### ✈️ Rutas directas", resultado["directas"])
@@ -211,7 +210,18 @@ def main():
                 index=paises,
                 columns=paises
             )
+            
             st.dataframe(df_matriz, use_container_width=True)
+
+            # analisis = analizar_conectividad_matricial(st.session_state, None, None)
+            # df_A2 = pd.DataFrame(
+            #     analisis["A2"],
+            #     index=paises,
+            #     columns=paises
+            # )
+            
+            # st.dataframe(df_A2, use_container_width=True)
+
 
     with columna_panel:
         st.subheader("🧭 Visualización de la ruta")
@@ -230,7 +240,7 @@ def main():
         st.divider()
         st.subheader("🌍 Mapa interactivo")
 
-        coordenadas = cargar_coordenadas("datos/coordenadas_paises.csv")
+        coordenadas = cargar_datos_csv("datos/coordenadas_paises.csv", tipo_dato='coordenadas')
         if st.session_state.ruta_seleccionada: dibujar_mapa(st.session_state.ruta_seleccionada, st, coordenadas)
         else: mostrar_mensaje_panel("✈️ Selecciona una ruta para visualizar el mapa")
 

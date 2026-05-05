@@ -10,27 +10,44 @@ errores de modulos no encontrados
 'Ctrl + Shift + P' y seleccionar 'select interpreter' para verificar o corregir este error de modulo
 '''
 import numpy as np
-from  random import random 
 import base64
 import pandas as pd
 import pydeck as pdk
 from graphviz import Digraph
 
-paises = [
-    "Perú", "Chile", "Argentina", "Brasil",
-    "Colombia", "México", "Ecuador", "Bolivia",
-    "Paraguay", "Uruguay", "Panamá", "Costa Rica"
-]
+def cargar_imagen(ruta):
+    with open(ruta, "rb") as archivo:
+        data = archivo.read()
+    return base64.b64encode(data).decode()
 
-def generar_matriz_aleatoria(dimension, probabilidad=0.25):
+
+def cargar_datos_csv(ruta_csv, *, tipo_dato: str) -> dict:
+    df = pd.read_csv(ruta_csv)
+    if tipo_dato == 'coordenadas':
+        return {
+            fila['pais']: (fila['longitud'], fila['latitud'])
+            for _, fila in df.iterrows()
+        }
+    elif tipo_dato == 'conexiones':
+        return [
+            (fila["origen"], fila["destino"])
+            for _, fila in df.iterrows()
+        ]
+
+coordenadas_paises = cargar_datos_csv("datos\coordenadas_paises.csv", tipo_dato='coordenadas')
+conexiones = cargar_datos_csv("datos\conexiones.csv", tipo_dato='conexiones')
+
+paises = [ i for i in coordenadas_paises.keys()]
+
+def crear_matriz(dimension):
     matriz = np.zeros((dimension, dimension), dtype=int)
-            
-    for i in range(dimension):
-        for j in range(dimension):
-            if random() <= probabilidad:
-                matriz[i][j] = 1
-                matriz[j][i] = 1
-    np.fill_diagonal(matriz, 0)
+
+    for _, (origen, destino)  in enumerate(conexiones):
+        i = paises.index(origen)
+        j = paises.index(destino)
+
+        matriz[i][j] = 1
+
     return matriz
 
 def validar_origen_destino(origen, destino):
@@ -49,6 +66,8 @@ def agregar_ruta(matriz, origen, destino):
     matriz[i][j] = 1
     matriz[j][i] = 1
     return True
+
+
 
 def producto_booleano(matriz_a, matriz_b):
     matriz_a = np.array(matriz_a, dtype=int)
@@ -70,11 +89,11 @@ def producto_booleano(matriz_a, matriz_b):
 
 def calcular_conectividad(matriz):
     A = np.array(matriz, dtype=int).copy()
-    np.fill_diagonal(A, 0)
+    np.fill_diagonal(A,0)
     A2 = producto_booleano(A, A)
-    np.fill_diagonal(A2, 0)
+    np.fill_diagonal(A2,0)
     A3 = producto_booleano(A2, A)
-    np.fill_diagonal(A3, 0)
+    np.fill_diagonal(A3,0)
 
     return A, A2 , A3
 
@@ -96,7 +115,9 @@ def analizar_conectividad_matricial(matriz, origen, destino):
         "una_escala" : una_escala,
         "dos_escalas" : dos_escalas,
         "hay_conectividad" : directa or una_escala or dos_escalas
-    }
+    }   
+
+
 
 def rutas_directas(matriz, origen, destino):
     i = paises.index(origen)
@@ -129,6 +150,7 @@ def rutas_dos_escalas(matriz, origen, destino):
                 rutas.append([origen, escala1, escala2, destino])
     
     return rutas
+
 
 
 def dibujar_grafo(ruta, contenedor):
@@ -164,18 +186,6 @@ def dibujar_grafo(ruta, contenedor):
         dot.edge(f"n{i}", f"n{i + 1}")
 
     contenedor.graphviz_chart(dot)
-
-def cargar_imagen(ruta):
-    with open(ruta, "rb") as archivo:
-        data = archivo.read()
-    return base64.b64encode(data).decode()
-
-def cargar_coordenadas(ruta_csv):
-    df = pd.read_csv(ruta_csv)
-
-    return {
-        fila["pais"]: (fila["longitud"], fila["latitud"]) for _, fila in df.iterrows()
-    }
 
 def interpolar_color(t):
     r = int(46 + (217 - 46) * t)
@@ -248,7 +258,8 @@ def dibujar_mapa(ruta, contenedor, coordenadas):
         tooltip={
             "html": "<b>{pais}</b>",
             "style": {"color": "white"}
-        }
+        }\
     )
 
     contenedor.pydeck_chart(mapa, height=500)
+    
