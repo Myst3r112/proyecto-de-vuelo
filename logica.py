@@ -21,7 +21,7 @@ def cargar_imagen(ruta):
     return base64.b64encode(data).decode()
 
 
-def cargar_datos_csv(ruta_csv, *, tipo_dato: str) -> dict:
+def cargar_datos_csv(ruta_csv, *, tipo_dato: str):
     df = pd.read_csv(ruta_csv)
     if tipo_dato == 'coordenadas':
         return {
@@ -34,15 +34,15 @@ def cargar_datos_csv(ruta_csv, *, tipo_dato: str) -> dict:
             for _, fila in df.iterrows()
         ]
 
-coordenadas_paises = cargar_datos_csv("datos\coordenadas_paises.csv", tipo_dato='coordenadas')
-conexiones = cargar_datos_csv("datos\conexiones.csv", tipo_dato='conexiones')
+coordenadas_paises = cargar_datos_csv("datos/coordenadas_paises.csv", tipo_dato='coordenadas')
+conexiones = cargar_datos_csv("datos/conexiones.csv", tipo_dato='conexiones')
 
 paises = [ i for i in coordenadas_paises.keys()]
 
 def crear_matriz(dimension):
     matriz = np.zeros((dimension, dimension), dtype=int)
 
-    for _, (origen, destino)  in enumerate(conexiones):
+    for origen, destino  in conexiones:
         i = paises.index(origen)
         j = paises.index(destino)
 

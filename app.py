@@ -213,15 +213,6 @@ def main():
             
             st.dataframe(df_matriz, use_container_width=True)
 
-            # analisis = analizar_conectividad_matricial(st.session_state, None, None)
-            # df_A2 = pd.DataFrame(
-            #     analisis["A2"],
-            #     index=paises,
-            #     columns=paises
-            # )
-            
-            # st.dataframe(df_A2, use_container_width=True)
-
 
     with columna_panel:
         st.subheader("🧭 Visualización de la ruta")
