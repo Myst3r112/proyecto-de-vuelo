@@ -1,20 +1,6 @@
 import pandas as pd
 import streamlit as st
-from logica import (
-    cargar_imagen,
-    paises,
-    coordenadas_paises,
-    crear_matriz,
-    validar_origen_destino,
-    agregar_ruta,
-    analizar_conectividad_matricial,
-    calcular_origenes_destinos,
-    rutas_directas,
-    rutas_una_escala,
-    rutas_dos_escalas,
-    dibujar_grafo,
-    dibujar_mapa
-)
+from logica import *
 
 st.set_page_config(
     page_title="Rutas Aéreas",
