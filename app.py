@@ -91,7 +91,7 @@ def mostrar_botones_rutas(titulo, rutas):
     if not rutas: return
 
     st.markdown(titulo)
-    for i, ruta in enumerate(rutas):
+    for _, ruta in enumerate(rutas):
         texto = " → ".join(ruta)
 
         if st.button(texto, use_container_width=True):
@@ -146,7 +146,10 @@ def main():
 
             bloque1, bloque2 = st.columns(2)
             with bloque1: origen = st.selectbox("País de origen", paises)
-            with bloque2: destino = st.selectbox("País de destino", paises)
+
+            destinos_disponibles = calcular_destinos(st.session_state.matriz, origen)
+            
+            with bloque2: destino = st.selectbox("País de destino", destinos_disponibles)
 
             if st.button("Buscar rutas", use_container_width=True):
                 valido, mensaje = validar_origen_destino(origen, destino)

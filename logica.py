@@ -20,7 +20,6 @@ def cargar_imagen(ruta):
         data = archivo.read()
     return base64.b64encode(data).decode()
 
-
 def cargar_datos_csv(ruta_csv, *, tipo_dato: str):
     df = pd.read_csv(ruta_csv)
     if tipo_dato == 'coordenadas':
@@ -116,6 +115,17 @@ def analizar_conectividad_matricial(matriz, origen, destino):
         "dos_escalas" : dos_escalas,
         "hay_conectividad" : directa or una_escala or dos_escalas
     }   
+
+def calcular_destinos(matriz, origen):
+    i = paises.index(origen)
+    destinos = list()
+    
+    for j, pais in enumerate(paises):
+        if matriz[i][j] == 1:
+            destinos.append(pais)
+    
+    return destinos
+
 
 
 
