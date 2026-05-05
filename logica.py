@@ -121,7 +121,8 @@ def calcular_destinos(matriz, origen):
     destinos = list()
     
     for j, pais in enumerate(paises):
-        if matriz[i][j] == 1:
+        buscar_conexion = analizar_conectividad_matricial(matriz, origen, pais)
+        if buscar_conexion["hay_conectividad"]:
             destinos.append(pais)
     
     return destinos
