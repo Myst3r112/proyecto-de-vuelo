@@ -1,6 +1,20 @@
 import pandas as pd
 import streamlit as st
-from logica import *
+from logica import (
+    cargar_imagen,
+    cargar_datos_csv,
+    paises,
+    crear_matriz,
+    validar_origen_destino,
+    agregar_ruta,
+    analizar_conectividad_matricial,
+    calcular_destinos,
+    rutas_directas,
+    rutas_una_escala,
+    rutas_dos_escalas,
+    dibujar_grafo,
+    dibujar_mapa
+)
 
 st.set_page_config(
     page_title="Rutas Aéreas",
@@ -148,7 +162,7 @@ def main():
             with bloque1: origen = st.selectbox("País de origen", paises)
 
             destinos_disponibles = calcular_destinos(st.session_state.matriz, origen)
-            
+
             with bloque2: destino = st.selectbox("País de destino", destinos_disponibles)
 
             if st.button("Buscar rutas", use_container_width=True):
