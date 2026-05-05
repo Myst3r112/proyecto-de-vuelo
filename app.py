@@ -2,13 +2,13 @@ import pandas as pd
 import streamlit as st
 from logica import (
     cargar_imagen,
-    cargar_datos_csv,
     paises,
+    coordenadas_paises,
     crear_matriz,
     validar_origen_destino,
     agregar_ruta,
     analizar_conectividad_matricial,
-    calcular_destinos,
+    calcular_origenes_destinos,
     rutas_directas,
     rutas_una_escala,
     rutas_dos_escalas,
@@ -71,14 +71,11 @@ def mostrar_encabezado():
     )
 
 def inicializar_estado():
-    if "matriz" not in st.session_state:
-        st.session_state.matriz = crear_matriz(len(paises))
-
-    if "resultado_busqueda" not in st.session_state:
-        st.session_state.resultado_busqueda = None
-
-    if "ruta_seleccionada" not in st.session_state:
-        st.session_state.ruta_seleccionada = None
+    if "matriz" not in st.session_state: st.session_state.matriz = crear_matriz(len(paises))
+    if "resultado_busqueda" not in st.session_state: st.session_state.resultado_busqueda = None
+    if "ruta_seleccionada" not in st.session_state: st.session_state.ruta_seleccionada = None
+    if "origen_busqueda" not in st.session_state: st.session_state.origen_busqueda = None
+    if "destino_busqueda" not in st.session_state: st.session_state.destino_busqueda = None
 
 def limpiar_busqueda():
     st.session_state.resultado_busqueda = None
@@ -158,13 +155,39 @@ def main():
         with tabla1:
             st.subheader("Buscar rutas entre países")
 
+            origen_actual = st.session_state.get("origen_busqueda")
+            destino_actual = st.session_state.get("destino_busqueda")
+
+            if destino_actual is not None: 
+                opciones_origen = calcular_origenes_destinos(st.session_state.matriz, destino=destino_actual)
+            else: opciones_origen = paises
+            
+            if origen_actual is not None: 
+                opciones_destino = calcular_origenes_destinos(st.session_state.matriz, origen=origen_actual)
+            else: opciones_destino = paises
+
+            
+
             bloque1, bloque2 = st.columns(2)
-            with bloque1: origen = st.selectbox("País de origen", paises)
 
-            destinos_disponibles = calcular_destinos(st.session_state.matriz, origen)
 
-            with bloque2: destino = st.selectbox("País de destino", destinos_disponibles)
+            with bloque1: origen = st.selectbox(
+                "País de origen",
+                opciones_origen,
+                index=None,
+                placeholder="Ingrese un origen",
+                key="origen_busqueda"
+                )
 
+            with bloque2: destino = st.selectbox(
+                "País de destino", 
+                opciones_destino,
+                index=None,
+                placeholder="Ingrese un destino",
+                key="destino_busqueda"
+                )
+            
+            
             if st.button("Buscar rutas", use_container_width=True):
                 valido, mensaje = validar_origen_destino(origen, destino)
 
@@ -173,6 +196,7 @@ def main():
                     limpiar_busqueda()
                 else:
                     analisis = analizar_conectividad_matricial(st.session_state.matriz, origen, destino)
+                    
                     st.session_state.resultado_busqueda = {
                         "analisis": analisis,
                         "directas": rutas_directas(analisis["A"], origen, destino),
@@ -248,8 +272,7 @@ def main():
         st.divider()
         st.subheader("🌍 Mapa interactivo")
 
-        coordenadas = cargar_datos_csv("datos/coordenadas_paises.csv", tipo_dato='coordenadas')
-        if st.session_state.ruta_seleccionada: dibujar_mapa(st.session_state.ruta_seleccionada, st, coordenadas)
+        if st.session_state.ruta_seleccionada: dibujar_mapa(st.session_state.ruta_seleccionada, st, coordenadas_paises)
         else: mostrar_mensaje_panel("✈️ Selecciona una ruta para visualizar el mapa")
 
 if __name__ == "__main__":

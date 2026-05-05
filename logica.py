@@ -52,6 +52,8 @@ def crear_matriz(dimension):
 def validar_origen_destino(origen, destino):
     if origen == destino:
         return False, "No se puede usar el mismo pais como origen y destino"
+    if origen is None or destino is None:
+        return False, "Selecciona un país de origen y un país de destino."
     return True, ""
 
 def agregar_ruta(matriz, origen, destino):
@@ -116,18 +118,19 @@ def analizar_conectividad_matricial(matriz, origen, destino):
         "hay_conectividad" : directa or una_escala or dos_escalas
     }   
 
-def calcular_destinos(matriz, origen):
-    i = paises.index(origen)
-    destinos = list()
+def calcular_origenes_destinos(matriz, *, origen=None, destino=None):
+    opciones = list()
     
-    for j, pais in enumerate(paises):
-        buscar_conexion = analizar_conectividad_matricial(matriz, origen, pais)
+    for _, pais in enumerate(paises):
+        if pais == origen: continue
+
+        if origen is not None: buscar_conexion = analizar_conectividad_matricial(matriz, origen, pais)
+        if destino is not None: buscar_conexion = analizar_conectividad_matricial(matriz, pais, destino)
+
         if buscar_conexion["hay_conectividad"]:
-            destinos.append(pais)
+            opciones.append(pais)
     
-    return destinos
-
-
+    return opciones
 
 
 def rutas_directas(matriz, origen, destino):
