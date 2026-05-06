@@ -290,11 +290,7 @@ def main():
             st.divider()
             st.subheader("Digrafo dirigido interno (Por ahora se ve solo pa verificar aña)")
 
-            dibujar_mapa_digrafo_interno(
-                st.session_state.matriz,
-                st,
-                coordenadas_paises
-            )
+            dibujar_mapa_digrafo_interno(st.session_state.matriz, st, coordenadas_paises)
 
     with columna_panel:
         st.subheader("🧭 Visualización de la ruta")
