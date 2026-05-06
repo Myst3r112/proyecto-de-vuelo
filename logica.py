@@ -65,6 +65,10 @@ def validar_ruta(ruta):
 
     return True, ""
 
+
+
+
+
 def producto_booleano(matriz_a, matriz_b):
     matriz_a = np.array(matriz_a, dtype=int)
     matriz_b = np.array(matriz_b, dtype=int)
@@ -177,7 +181,7 @@ def distancia_ruta(ruta):
         distancia_total += distancia_entre_paises(ruta[i], ruta[i + 1])
     return distancia_total
 
-def verificar_margen_desvio(ruta, margen):
+def verificar_margen_desvio(ruta, *, margen: float = 0.03):
     origen, destino = ruta[0], ruta[-1]
 
     distancia_directa = distancia_entre_paises(origen, destino)
@@ -201,19 +205,16 @@ def conexiones_para_agregar(matriz, ruta):
     nuevas = list()
 
     for i in range(len(ruta) - 1):
-        origen = ruta[i]
-        destino = ruta[i + 1]
+        origen, destino = ruta[i], ruta[i + 1]
 
         fila = paises.index(origen)
         columna = paises.index(destino)
 
-        if matriz[fila][columna] == 0:
-            nuevas.append((origen, destino))
+        if matriz[fila][columna] == 0: nuevas.append((origen, destino))
         
-    
     return nuevas
 
-def cargar_recomendaciones(matriz, origen, destino, *, tipo_ruta: str, margen: float = 0.30) -> list:    
+def cargar_recomendaciones(matriz, origen, destino, *, tipo_ruta: str) -> list:    
     recomendaciones = list()
     valido, _ = validar_origen_destino(origen, destino)
     if not valido: return recomendaciones
@@ -224,7 +225,7 @@ def cargar_recomendaciones(matriz, origen, destino, *, tipo_ruta: str, margen: f
             ruta_valida, _ = validar_ruta(ruta)
             if not ruta_valida: continue
 
-            cumple_margen, distancia_total, limite = verificar_margen_desvio(ruta, margen)
+            cumple_margen, distancia_total, limite = verificar_margen_desvio(ruta)
             if not cumple_margen: continue
             if verificar_existencia_ruta(matriz, ruta): continue
 
@@ -232,7 +233,7 @@ def cargar_recomendaciones(matriz, origen, destino, *, tipo_ruta: str, margen: f
             if not nuevas: continue
 
             recomendaciones.append({
-                "texto": escala1,
+                "escala": escala1,
                 "ruta": ruta,
                 "distancia_total": distancia_total,
                 "limite": limite,
@@ -244,13 +245,13 @@ def cargar_recomendaciones(matriz, origen, destino, *, tipo_ruta: str, margen: f
                 ruta_valida, _ = validar_ruta(ruta)
                 if not ruta_valida: continue
 
-                cumple_margen, distancia_total, limite = verificar_margen_desvio(ruta, margen)
+                cumple_margen, distancia_total, limite = verificar_margen_desvio(ruta)
                 if not cumple_margen: continue
                 if verificar_existencia_ruta(matriz, ruta): continue
                 nuevas = conexiones_para_agregar(matriz, ruta)
                 if not nuevas: continue
                 recomendaciones.append({
-                    "texto": f"{escala1} -> {escala2}",
+                    "escala": f"{escala1} -> {escala2}",
                     "ruta": ruta,
                     "distancia_total": distancia_total,
                     "limite": limite,
@@ -260,11 +261,11 @@ def cargar_recomendaciones(matriz, origen, destino, *, tipo_ruta: str, margen: f
     recomendaciones.sort(key=lambda x: x["distancia_total"])
     return recomendaciones                
 
-def agregar_rutas_escalas(matriz, ruta, margen: float = 0.30):
+def agregar_rutas_escalas(matriz, ruta):
     if len(ruta) not in (3, 4): return False, "La ruta debe tener una o dos escalas"
     valido, mensaje = validar_ruta(ruta)
     if not valido: return False, mensaje
-    cumple_margen, distancia_total, limite = verificar_margen_desvio(ruta, margen)
+    cumple_margen, _, _ = verificar_margen_desvio(ruta)
     if not cumple_margen: return False, "La ruta no cumple con el margen de desvio permitido"
     if verificar_existencia_ruta(matriz, ruta): return False, "La ruta ya existe en la matriz de conexiones"
     nuevas_conexiones = conexiones_para_agregar(matriz, ruta)
@@ -277,6 +278,12 @@ def agregar_rutas_escalas(matriz, ruta, margen: float = 0.30):
     texto_ruta = " -> ".join(ruta)
 
     return True, f"Ruta agregada correctamente: {texto_ruta}"
+
+
+
+
+
+
 
 def dibujar_grafo(ruta, contenedor):
     dot = Digraph()
@@ -312,6 +319,187 @@ def interpolar_color(t):
     g = int(139 + (75 - 139) * t)
     b = int(87 + (75 - 87) * t)
     return [r, g, b]
+
+def calcular_angulo_flecha(coordenada_origen, coordenada_destino):
+    longitud1, latitud1 = coordenada_origen
+    longitud2, latitud2 = coordenada_destino
+
+    angulo = math.degrees(math.atan2(latitud2 - latitud1, longitud2 - longitud1))
+    return angulo
+
+def calcular_punto_intermedio(coordenada_origen, coordenada_destino, proporcion):
+    longitud1, latitud1 = coordenada_origen
+    longitud2, latitud2 = coordenada_destino
+
+    longitud = longitud1 + (longitud2 - longitud1) * proporcion
+    latitud = latitud1 + (latitud2 - latitud1) * proporcion
+
+    return longitud, latitud
+
+def construir_digrafo_georeferenciado(matriz, coordenadas):
+    nodos = []
+    aristas = []
+    flechas = []
+
+    for pais in paises:
+        longitud, latitud = coordenadas[pais]
+
+        nodos.append({
+            "pais": pais,
+            "longitud": longitud,
+            "latitud": latitud,
+            "color": [77, 77, 77]
+        })
+
+    pares_procesados = set()
+
+    for i, origen in enumerate(paises):
+        for j, destino in enumerate(paises):
+            if i == j: continue
+            if matriz[i][j] == 0: continue
+
+            par = frozenset([origen, destino])
+            if par in pares_procesados: continue
+
+            pares_procesados.add(par)
+
+            existe_ida = matriz[i][j] == 1
+            existe_vuelta = matriz[j][i] == 1
+
+            coordenada_origen = coordenadas[origen]
+            coordenada_destino = coordenadas[destino]
+
+            distancia = distancia_entre_paises(origen, destino)
+
+            if existe_ida and existe_vuelta:
+                tramo = f"{origen} → {destino}<br>{destino} → {origen}"
+                tipo = "ida_vuelta"
+            else:
+                tramo = f"{origen} → {destino}"
+                tipo = "ida"
+
+            aristas.append({
+                "from": coordenada_origen,
+                "to": coordenada_destino,
+                "origen": origen,
+                "destino": destino,
+                "tramo": tramo,
+                "distancia": f"{distancia:.0f} km",
+                "tipo": tipo,
+                "color": [180, 180, 180]
+            })
+
+            if existe_ida:
+                longitud_flecha, latitud_flecha = calcular_punto_intermedio(
+                    coordenada_origen,
+                    coordenada_destino,
+                    0.65
+                )
+
+                flechas.append({
+                    "flecha": "➤",
+                    "longitud": longitud_flecha,
+                    "latitud": latitud_flecha,
+                    "angulo": calcular_angulo_flecha(coordenada_origen, coordenada_destino),
+                    "color": [255, 255, 255],
+                    "tramo": f"{origen} → {destino}",
+                    "distancia": f"{distancia:.0f} km"
+                })
+
+            if existe_vuelta:
+                longitud_flecha, latitud_flecha = calcular_punto_intermedio(
+                    coordenada_destino,
+                    coordenada_origen,
+                    0.65
+                )
+
+                flechas.append({
+                    "flecha": "➤",
+                    "longitud": longitud_flecha,
+                    "latitud": latitud_flecha,
+                    "angulo": calcular_angulo_flecha(coordenada_destino, coordenada_origen),
+                    "color": [255, 255, 255],
+                    "tramo": f"{destino} → {origen}",
+                    "distancia": f"{distancia:.0f} km"
+                })
+
+    return nodos, aristas, flechas
+
+def dibujar_mapa_digrafo_interno(matriz, contenedor, coordenadas):
+    nodos, aristas, flechas = construir_digrafo_georeferenciado(matriz, coordenadas)
+
+    capa_aristas = pdk.Layer(
+        "LineLayer",
+        data=aristas,
+        get_source_position="from",
+        get_target_position="to",
+        get_color="color",
+        get_width=3,
+        pickable=True
+    )
+    capa_nodos = pdk.Layer(
+        "ScatterplotLayer",
+        data=nodos,
+        get_position="[longitud, latitud]",
+        get_fill_color="color",
+        get_radius=900,
+        pickable=False
+    )
+    capa_flechas = pdk.Layer(
+        "TextLayer",
+        data=flechas,
+        get_position="[longitud, latitud]",
+        get_text="flecha",
+        get_color="color",
+        get_size=24,
+        get_angle="angulo",
+        get_text_anchor='"middle"',
+        get_alignment_baseline='"center"',
+        pickable=True
+    )
+    capa_nombres = pdk.Layer(
+        "TextLayer",
+        data=nodos,
+        get_position="[longitud, latitud]",
+        get_text="pais",
+        get_color=[255, 255, 255],
+        get_size=18,
+        get_pixel_offset=[0, -22],
+        get_text_anchor='"middle"',
+        get_alignment_baseline='"center"',
+        pickable=False
+    )
+    capas = [
+        capa_aristas,
+        capa_nodos,
+        capa_flechas,
+        capa_nombres
+    ]
+
+    latitudes = [coordenadas[pais][1] for pais in paises]
+    longitudes = [coordenadas[pais][0] for pais in paises]
+
+    vista = pdk.ViewState(
+        latitude=sum(latitudes) / len(latitudes),
+        longitude=sum(longitudes) / len(longitudes),
+        zoom=2.4
+    )
+    mapa = pdk.Deck(
+        layers=capas,
+        initial_view_state=vista,
+        map_style="dark",
+        tooltip={
+            "html": """
+                <b>{tramo}</b><br/>
+                Distancia: {distancia}
+            """,
+            "style": {
+                "color": "white"
+            }
+        }
+    )
+
+    contenedor.pydeck_chart(mapa, height=550)
 
 def dibujar_mapa(ruta, contenedor, coordenadas):
     lineas = []

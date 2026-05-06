@@ -52,6 +52,7 @@ def mostrar_encabezado():
             </h1>
             <p style="margin: 8px 0 0 0; font-size: 16px;">
                 Proyecto de Matemática Discreta: análisis de rutas mediante matrices de conectividad y grafos.
+                \nNO LO TOQUEN, NOSE QUE PASO PERO FUNCIONA
             </p>
         </div>
         """,
@@ -136,30 +137,35 @@ def mostrar_recomendaciones(recomendaciones):
     columnas = st.columns(2)
     for i, recomendacion in enumerate(recomendaciones):
         ruta = recomendacion["ruta"]
-        texto = recomendacion["texto"]
+        escala = recomendacion["escala"]
         distancia_total = recomendacion["distancia_total"]
         limite = recomendacion["limite"]
 
         with columnas[i % 2]:
             with st.container(border=True):
-                st.markdown(f"**{texto}**")
+                st.markdown(f"**{escala}**")
                 st.caption(f"Ruta: {' → '.join(ruta)}")
                 st.caption(f"Distancia: {distancia_total:.0f} km / Límite: {limite:.0f} km")
 
-                if st.button("Agregar esta ruta", use_container_width=True, key=f"agregar_{i}_{'_'.join(ruta)}"):
-                    agregado, mensaje = agregar_rutas_escalas(
-                        st.session_state.matriz,
-                        ruta,
-                        margen=0.30
-                    )
-
-                    st.session_state.mensaje_agregar = mensaje
-
-                    if agregado:
+                boton1, boton2 = st.columns(2)
+                with boton1:
+                    if st.button("Visualizar ruta", use_container_width=True, key=f"visualizar_{i}_{"_".join(ruta)}"):
                         st.session_state.ruta_seleccionada = ruta
                         st.session_state.resultado_busqueda = None
+                        st.rerun()
+                with boton2:
+                    if st.button("Agregar ruta", use_container_width=True, key=f"agregar_{i}_{'_'.join(ruta)}"):
+                        agregado, mensaje = agregar_rutas_escalas(
+                            st.session_state.matriz,
+                            ruta,
+                        )
 
-                    st.rerun()
+                        st.session_state.mensaje_agregar = mensaje
+
+                        if agregado:
+                            st.session_state.ruta_seleccionada = ruta
+                            st.session_state.resultado_busqueda = None
+                        st.rerun()
 
 def main():
     aplicar_estilos()
@@ -280,6 +286,15 @@ def main():
                 columns=paises
             )
             st.dataframe(df_matriz, use_container_width=True)
+
+            st.divider()
+            st.subheader("Digrafo dirigido interno (Por ahora se ve solo pa verificar aña)")
+
+            dibujar_mapa_digrafo_interno(
+                st.session_state.matriz,
+                st,
+                coordenadas_paises
+            )
 
     with columna_panel:
         st.subheader("🧭 Visualización de la ruta")
