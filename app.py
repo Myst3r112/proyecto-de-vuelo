@@ -184,7 +184,7 @@ def main():
             origen_actual = st.session_state.get("origen_busqueda")
             destino_actual = st.session_state.get("destino_busqueda")
 
-            if destino_actual is not None: opciones_origen = calcular_origenes_destinos(st.session_state.matriz, sdestino=destino_actual)
+            if destino_actual is not None: opciones_origen = calcular_origenes_destinos(st.session_state.matriz, destino=destino_actual)
             else: opciones_origen = paises
             
             if origen_actual is not None: opciones_destino = calcular_origenes_destinos(st.session_state.matriz, origen=origen_actual)
@@ -219,7 +219,7 @@ def main():
                     
                     st.session_state.resultado_busqueda = {
                         "analisis": analisis,
-                        "directas": buscar_rutas(analisis["A"], origen, destino, stipo_ruta="directa"),
+                        "directas": buscar_rutas(analisis["A"], origen, destino, tipo_ruta="directa"),
                         "una_escala": buscar_rutas(analisis["A"], origen, destino, tipo_ruta="una_escala"),
                         "dos_escalas": buscar_rutas(analisis["A"], origen, destino, tipo_ruta="dos_escalas")
                     }
@@ -298,7 +298,7 @@ def main():
         st.divider()
         st.subheader("🌍 Mapa interactivo")
 
-        if st.session_state.ruta_seleccionada: dibujar_mapa(st.session_state.ruta_seleccionada, st, coordenadas_paises)
+        if st.session_state.ruta_seleccionada: dibujar_mapa(st.session_state.ruta_seleccionada, st)
         else: mostrar_mensaje_panel("✈️ Selecciona una ruta para visualizar el mapa")
 
 

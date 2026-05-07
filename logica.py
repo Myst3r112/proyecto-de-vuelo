@@ -18,8 +18,7 @@ from graphviz import Digraph
 import math
 
 def cargar_imagen(ruta):
-    with open(ruta, "rb") as archivo:
-        data = archivo.read()
+    with open(ruta, "rb") as archivo: data = archivo.read()
     return base64.b64encode(data).decode()
 
 def cargar_datos_csv(ruta_csv, *, tipo_dato: str):
@@ -43,11 +42,49 @@ def interpolar_color(t):
     b = int(87 + (75 - 87) * t)
     return [r, g, b]
 
+def producto_booleano(matriz_a, matriz_b):
+    matriz_a = np.array(matriz_a, dtype=int)
+    matriz_b = np.array(matriz_b, dtype=int)
+
+    filas = matriz_a.shape[0]
+    columnas = matriz_b.shape[1]
+    intermedios = matriz_a.shape[1]
+
+    resultado = np.zeros((filas, columnas), dtype=int)
+
+    for i in range(filas):
+        for j in range(columnas):
+            for k in range(intermedios):
+                if matriz_a[i][k] and matriz_b[k][j]:
+                    resultado[i][j] = 1
+                    break
+    return resultado
+
+def formula_haversine(coordenada1, coordenada2):
+    longitud1, latitud1 = coordenada1
+    longitud2, latitud2 = coordenada2
+
+    radio_tierra = 6371
+
+    latitud1_rad = math.radians(latitud1)
+    latitud2_rad = math.radians(latitud2)
+    diferencia_latitud = math.radians(latitud2 - latitud1)
+    diferencia_longitud = math.radians(longitud2 - longitud1)
+
+    a = (
+        math.sin(diferencia_latitud / 2) ** 2
+        + math.cos(latitud1_rad) * math.cos(latitud2_rad)
+        * math.sin(diferencia_longitud / 2) ** 2
+    )
+
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    return radio_tierra * c
+
 coordenadas_paises = cargar_datos_csv("datos/coordenadas_paises.csv", tipo_dato='coordenadas')
 conexiones = cargar_datos_csv("datos/conexiones.csv", tipo_dato='conexiones')
 paises = [pais for pais in coordenadas_paises.keys()]
 MARGEN_DESVIO = 0.03
-PROPORCION = 0.65
 
 def crear_matriz(dimension) -> np.ndarray:
     matriz = np.zeros((dimension, dimension), dtype=int)
@@ -72,24 +109,6 @@ def validar_ruta(ruta):
         if pais not in paises: return False, f"El país {pais} no existe en la lista"
 
     return True, ""
-
-def producto_booleano(matriz_a, matriz_b):
-    matriz_a = np.array(matriz_a, dtype=int)
-    matriz_b = np.array(matriz_b, dtype=int)
-
-    filas = matriz_a.shape[0]
-    columnas = matriz_b.shape[1]
-    intermedios = matriz_a.shape[1]
-
-    resultado = np.zeros((filas, columnas), dtype=int)
-
-    for i in range(filas):
-        for j in range(columnas):
-            for k in range(intermedios):
-                if matriz_a[i][k] and matriz_b[k][j]:
-                    resultado[i][j] = 1
-                    break
-    return resultado
 
 def calcular_conectividad(matriz):
     A = np.array(matriz, dtype=int).copy()
@@ -143,27 +162,6 @@ def buscar_rutas(matriz, origen, destino, *, tipo_ruta: str) -> list:
                     if len({origen, escala1, escala2, destino}) != 4: continue
                     if matriz[i][k] and matriz[k][l] and matriz[l][j]: rutas.append([origen, escala1, escala2, destino])
     return rutas
-
-def formula_haversine(coordenada1, coordenada2):
-    longitud1, latitud1 = coordenada1
-    longitud2, latitud2 = coordenada2
-
-    radio_tierra = 6371
-
-    latitud1_rad = math.radians(latitud1)
-    latitud2_rad = math.radians(latitud2)
-    diferencia_latitud = math.radians(latitud2 - latitud1)
-    diferencia_longitud = math.radians(longitud2 - longitud1)
-
-    a = (
-        math.sin(diferencia_latitud / 2) ** 2
-        + math.cos(latitud1_rad) * math.cos(latitud2_rad)
-        * math.sin(diferencia_longitud / 2) ** 2
-    )
-
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-    return radio_tierra * c
 
 def distancia_entre_paises(pais1, pais2):
     coordenadas1 = coordenadas_paises[pais1]
@@ -333,25 +331,8 @@ def dibujar_grafo(ruta, contenedor):
     for i in range(len(ruta) - 1): dot.edge(f"n{i}", f"n{i + 1}")
     contenedor.graphviz_chart(dot)
 
-def calcular_angulo_flecha(coordenada_origen, coordenada_destino):
-    longitud1, latitud1 = coordenada_origen
-    longitud2, latitud2 = coordenada_destino
-    angulo = math.degrees(math.atan2(latitud2 - latitud1, longitud2 - longitud1))
-    return angulo
-
-def calcular_punto_intermedio(coordenada_origen, coordenada_destino, *, proporcion: float = PROPORCION):
-    longitud1, latitud1 = coordenada_origen
-    longitud2, latitud2 = coordenada_destino
-
-    longitud = longitud1 + (longitud2 - longitud1) * proporcion
-    latitud = latitud1 + (latitud2 - latitud1) * proporcion
-
-    return longitud, latitud
-
 def construir_datos_mapa_digrafo(digrafo):
-    nodos = list(digrafo["nodos"].values())
-    aristas = list()
-    flechas = list()
+    nodos, aristas = list(digrafo["nodos"].values()), list()
     pares_procesados = set()
 
     for (origen, destino), arista in digrafo["aristas"].items():
@@ -382,32 +363,10 @@ def construir_datos_mapa_digrafo(digrafo):
             "color": [180, 180, 180]
         })
 
-        longitud_flecha, latitud_flecha = calcular_punto_intermedio(arista["coordenada_origen"], arista["coordenada_destino"])
-        flechas.append({
-            "flecha": "➤",
-            "longitud": longitud_flecha,
-            "latitud": latitud_flecha,
-            "angulo": calcular_angulo_flecha(arista["coordenada_origen"], arista["coordenada_destino"]),
-            "color": [255, 255, 255],
-            "tramo": f"{origen} → {destino}",
-            "distancia": f"{arista['distancia']:.0f} km"
-        })
-
-        if existe_vuelta:
-            longitud_flecha, latitud_flecha = calcular_punto_intermedio(arista_vuelta["coordenada_origen"], arista_vuelta["coordenada_destino"])
-            flechas.append({
-                "flecha": "➤",
-                "longitud": longitud_flecha,
-                "latitud": latitud_flecha,
-                "angulo": calcular_angulo_flecha(arista_vuelta["coordenada_origen"], arista_vuelta["coordenada_destino"]),
-                "color": [255, 255, 255],
-                "tramo": f"{destino} → {origen}",
-                "distancia": f"{arista_vuelta['distancia']:.0f} km"
-            })
-    return nodos, aristas, flechas
+    return nodos, aristas
 
 def dibujar_mapa_digrafo_interno(digrafo, contenedor):
-    nodos, aristas, flechas = construir_datos_mapa_digrafo(digrafo)
+    nodos, aristas = construir_datos_mapa_digrafo(digrafo)
 
     capa_aristas = pdk.Layer(
         "LineLayer",
@@ -428,31 +387,6 @@ def dibujar_mapa_digrafo_interno(digrafo, contenedor):
         pickable=False
     )
 
-    capa_flechas = pdk.Layer(
-        "TextLayer",
-        data=flechas,
-        get_position="[longitud, latitud]",
-        get_text="flecha",
-        get_color="color",
-        get_size=24,
-        get_angle="angulo",
-        get_text_anchor='"middle"',
-        get_alignment_baseline='"center"',
-        pickable=True
-    )
-
-    capa_nombres = pdk.Layer(
-        "TextLayer",
-        data=nodos,
-        get_position="[longitud, latitud]",
-        get_text="pais",
-        get_color=[255, 255, 255],
-        get_size=18,
-        get_pixel_offset=[0, -22],
-        get_text_anchor='"middle"',
-        get_alignment_baseline='"center"',
-        pickable=False
-    )
 
     latitudes = [nodo["latitud"] for nodo in nodos]
     longitudes = [nodo["longitud"] for nodo in nodos]
@@ -464,7 +398,7 @@ def dibujar_mapa_digrafo_interno(digrafo, contenedor):
     )
 
     mapa = pdk.Deck(
-        layers=[capa_aristas, capa_nodos, capa_flechas, capa_nombres],
+        layers=[capa_aristas, capa_nodos],
         initial_view_state=vista,
         map_style="dark",
         tooltip={
@@ -479,7 +413,7 @@ def dibujar_mapa_digrafo_interno(digrafo, contenedor):
     )
     contenedor.pydeck_chart(mapa, height=550)
 
-def dibujar_mapa(ruta, contenedor, coordenadas):
+def dibujar_mapa(ruta, contenedor):
     lineas = list()
     puntos = list()
     distancia = len(ruta)
@@ -490,7 +424,7 @@ def dibujar_mapa(ruta, contenedor, coordenadas):
         colores_nodos.append(interpolar_color(t))
     
     for i, pais in enumerate(ruta):
-        longitud, latitud = coordenadas[pais]
+        longitud, latitud = coordenadas_paises[pais]
         puntos.append({
             "pais": pais,
             "longitud": longitud,
@@ -499,7 +433,7 @@ def dibujar_mapa(ruta, contenedor, coordenadas):
         })
 
     for j in range(distancia - 1):
-        origen, destino = coordenadas[ruta[j]], coordenadas[ruta[j + 1]]
+        origen, destino = coordenadas_paises[ruta[j]], coordenadas_paises[ruta[j + 1]]
         lineas.append({
             "from": origen,
             "to": destino,
@@ -526,8 +460,8 @@ def dibujar_mapa(ruta, contenedor, coordenadas):
         pickable=True,
     )
 
-    latitudes = [coordenadas[pais][1] for pais in ruta]
-    longitudes = [coordenadas[pais][0] for pais in ruta]
+    latitudes = [coordenadas_paises[pais][1] for pais in ruta]
+    longitudes = [coordenadas_paises [pais][0] for pais in ruta]
 
     vista = pdk.ViewState(
         latitude=sum(latitudes) / len(latitudes),
