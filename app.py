@@ -289,10 +289,7 @@ def main():
         st.caption("🟢 Origen   🔵 Escala   🔴 Destino")
 
         if st.session_state.ruta_seleccionada:
-            st.markdown(
-                f"**Ruta seleccionada:** "
-                f"{' → '.join(st.session_state.ruta_seleccionada)}"
-            )
+            st.markdown(f"**Ruta seleccionada:** { ' → '.join(st.session_state.ruta_seleccionada)}")
 
             _, centro, _ = st.columns(3)
             with centro: dibujar_grafo(st.session_state.ruta_seleccionada, st)
