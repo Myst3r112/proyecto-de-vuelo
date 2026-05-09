@@ -23,23 +23,23 @@ def cargar_imagen(ruta):
 
 def cargar_datos_csv(ruta_csv, *, tipo_dato: str):
     df = pd.read_csv(ruta_csv)
-
-    if tipo_dato == 'coordenadas':
-        return {
-            fila['pais']: (fila['longitud'], fila['latitud'])
-            for _, fila in df.iterrows()
-        }
-    
-    elif tipo_dato == 'conexiones':
-        return [
-            (fila["origen"], fila["destino"])
-            for _, fila in df.iterrows()
-        ]
+    match tipo_dato:
+        case "coordenadas":
+            return {
+                fila["pais"]: (fila["longitud"], fila["latitud"])
+                for _, fila in df.iterrows()
+            }
+        case "conexiones":
+            return [
+                (fila["origen"], fila["destino"])
+                for _, fila in df.iterrows()
+            ]
 
 def interpolar_color(t):
     r = int(46 + (217 - 46) * t)
     g = int(139 + (75 - 139) * t)
     b = int(87 + (75 - 87) * t)
+
     return [r, g, b]
 
 def producto_booleano(matriz_a, matriz_b):
@@ -58,6 +58,7 @@ def producto_booleano(matriz_a, matriz_b):
                 if matriz_a[i][k] and matriz_b[k][j]:
                     resultado[i][j] = 1
                     break
+
     return resultado
 
 def formula_haversine(coordenada1, coordenada2):
@@ -81,8 +82,8 @@ def formula_haversine(coordenada1, coordenada2):
 
     return radio_tierra * c
 
-coordenadas_paises = cargar_datos_csv("datos/coordenadas_paises.csv", tipo_dato='coordenadas')
-conexiones = cargar_datos_csv("datos/conexiones.csv", tipo_dato='conexiones')
+coordenadas_paises = cargar_datos_csv("datos/coordenadas_paises.csv", tipo_dato="coordenadas")
+conexiones = cargar_datos_csv("datos/conexiones.csv", tipo_dato="conexiones")
 paises = [pais for pais in coordenadas_paises.keys()]
 MARGEN_DESVIO = 0.03
 
@@ -90,24 +91,23 @@ def crear_matriz(dimension) -> np.ndarray:
     matriz = np.zeros((dimension, dimension), dtype=int)
 
     for origen, destino in conexiones:
-        i, j = paises.index(origen), paises.index(destino)
-        matriz[i][j] = 1
+        if origen in paises and destino in paises:
+            i, j = paises.index(origen), paises.index(destino)
+            matriz[i][j] = 1
 
     return matriz
 
 def validar_origen_destino(origen, destino):
     if origen is None and destino is None: return False, "Selecciona un pais de origen y destino"
-    if origen == destino: return False, "No se puede usar el mismo pais como origen y destino"
-    if origen is None: return False, "Selecciona un país de origen"
+    if origen is None: return False, "Selecciona un pais de origen"
     if destino is None: return False, "Selecciona un pais de destino"
+    if origen == destino: return False, "No se puede usar el mismo pais como origen y destino"
     return True, ""
 
 def validar_ruta(ruta):
     if len(ruta) != len(set(ruta)): return False, "La ruta no puede repetir paises"
-    
     for pais in ruta:
-        if pais not in paises: return False, f"El país {pais} no existe en la lista"
-
+        if pais not in paises: return False, f"El pais {pais} no existe en la lista"
     return True, ""
 
 def calcular_conectividad(matriz):
@@ -117,12 +117,14 @@ def calcular_conectividad(matriz):
     np.fill_diagonal(A2, 0)
     A3 = producto_booleano(A2, A)
     np.fill_diagonal(A3, 0)
-
     return A, A2, A3
 
 def analizar_conectividad_matricial(matriz, origen, destino):
     A, A2, A3 = calcular_conectividad(matriz)
-    i, j = paises.index(origen), paises.index(destino)
+
+    i = paises.index(origen)
+    j = paises.index(destino)
+
     directa = A[i][j] == 1
     una_escala = A2[i][j] == 1
     dos_escalas = A3[i][j] == 1
@@ -137,27 +139,35 @@ def analizar_conectividad_matricial(matriz, origen, destino):
 
 def calcular_origenes_destinos(matriz, *, origen=None, destino=None) -> list:
     opciones = list()
-    
-    for _, pais in enumerate(paises):
-        if pais == origen: continue
-        if origen is not None: buscar_conexion = analizar_conectividad_matricial(matriz, origen, pais)
-        if destino is not None: buscar_conexion = analizar_conectividad_matricial(matriz, pais, destino)
-        if buscar_conexion["hay_conectividad"]: opciones.append(pais)
-    
+    A, A2, A3 = calcular_conectividad(matriz)
+    conectividad_total = A + A2 + A3
+
+    if origen is not None:
+        i = paises.index(origen)
+        for j, pais in enumerate(paises):
+            if pais == origen: continue
+            if conectividad_total[i][j] != 0: opciones.append(pais)
+    elif destino is not None:
+        j = paises.index(destino)
+        for i, pais in enumerate(paises):
+            if pais == destino: continue
+            if conectividad_total[i][j] != 0: opciones.append(pais)
+    else: opciones = paises
+
     return opciones
 
 def buscar_rutas(matriz, origen, destino, *, tipo_ruta: str) -> list:
-    rutas = []
+    rutas = list()
     i, j = paises.index(origen), paises.index(destino)
-
-    if tipo_ruta == "directa":
-        if matriz[i][j]: rutas.append([origen, destino])
-    else:
-        for k, escala1 in enumerate(paises):
-            if tipo_ruta == "una_escala":
-                if escala1 in (origen, destino): continue
-                if matriz[i][k] and matriz[k][j]: rutas.append([origen, escala1, destino])
-            if tipo_ruta == "dos_escalas":
+    match tipo_ruta:
+        case "directa":
+            if matriz[i][j]: rutas.append([origen, destino])
+        case "una_escala":
+            for k, escala in enumerate(paises):
+                if escala in (origen, destino): continue
+                if matriz[i][k] and matriz[k][j]: rutas.append([origen, escala, destino])
+        case "dos_escalas":
+            for k, escala1 in enumerate(paises):
                 for l, escala2 in enumerate(paises):
                     if len({origen, escala1, escala2, destino}) != 4: continue
                     if matriz[i][k] and matriz[k][l] and matriz[l][j]: rutas.append([origen, escala1, escala2, destino])
@@ -176,7 +186,6 @@ def construir_digrafo_interno(matriz):
 
     for pais in paises:
         longitud, latitud = coordenadas_paises[pais]
-
         digrafo["nodos"][pais] = {
             "pais": pais,
             "longitud": longitud,
@@ -191,7 +200,6 @@ def construir_digrafo_interno(matriz):
             coordenada_origen = coordenadas_paises[origen]
             coordenada_destino = coordenadas_paises[destino]
             distancia = formula_haversine(coordenada_origen, coordenada_destino)
-
             digrafo["aristas"][(origen, destino)] = {
                 "origen": origen,
                 "destino": destino,
@@ -205,32 +213,27 @@ def construir_digrafo_interno(matriz):
 
 def calcular_distancia_ruta(digrafo, ruta):
     distancia_total = 0
-    for i in range(len(ruta) - 1):
-        distancia_total += digrafo["aristas"][(ruta[i], ruta[i + 1])]["distancia"]
+    for i in range(len(ruta) - 1): distancia_total += digrafo["aristas"][(ruta[i], ruta[i + 1])]["distancia"]
     return distancia_total
 
 def verificar_margen_desvio(digrafo, ruta, *, margen: float = MARGEN_DESVIO):
     origen, destino = ruta[0], ruta[-1]
-
     distancia_directa = digrafo["aristas"][(origen, destino)]["distancia"]
     distancia_total = calcular_distancia_ruta(digrafo, ruta)
-
     limite = distancia_directa * (1 + margen)
-
     return distancia_total <= limite, distancia_total, limite
 
 def recorrer_ruta_paises_pares(digrafo, ruta, *, funcion: str):
     nuevas = list()
-
     for i in range(len(ruta) - 1):
-        origen, destino = ruta[i], ruta[i + 1]
+        origen = ruta[i]
+        destino = ruta[i + 1]
         arista = digrafo["aristas"][(origen, destino)]
-
         if funcion == "verificar_existencia":
             if not arista["existe"]: return False
         if funcion == "agregar_conexiones":
             if not arista["existe"]: nuevas.append((origen, destino))
-    
+
     if funcion == "verificar_existencia": return True
     if funcion == "agregar_conexiones": return nuevas
 
@@ -238,67 +241,72 @@ def cargar_recomendaciones(digrafo, origen, destino, *, tipo_ruta: str) -> list:
     recomendaciones = list()
     valido, _ = validar_origen_destino(origen, destino)
     if not valido: return recomendaciones
-
     for escala1 in paises:
-        if tipo_ruta == "una_escala":
-            ruta = [origen, escala1, destino]
-            ruta_valida, _ = validar_ruta(ruta)
-            if not ruta_valida: continue
-
-            cumple_margen, distancia_total, limite = verificar_margen_desvio(digrafo, ruta)
-            if not cumple_margen: continue
-            if recorrer_ruta_paises_pares(digrafo, ruta, funcion="verificar_existencia"): continue
-
-            nuevas = recorrer_ruta_paises_pares(digrafo, ruta, funcion="agregar_conexiones")
-            if not nuevas: continue
-
-            recomendaciones.append({
-                "escala": escala1,
-                "ruta": ruta,
-                "distancia_total": distancia_total,
-                "limite": limite,
-                "conexiones_nuevas": nuevas
-            })
-        if tipo_ruta == "dos_escalas":
-            for escala2 in paises:
-                ruta = [origen, escala1, escala2, destino]
+        match tipo_ruta:
+            case "una_escala":
+                ruta = list([origen, escala1, destino])
                 ruta_valida, _ = validar_ruta(ruta)
-                if not ruta_valida: continue
 
+                if not ruta_valida: continue
                 cumple_margen, distancia_total, limite = verificar_margen_desvio(digrafo, ruta)
+
                 if not cumple_margen: continue
                 if recorrer_ruta_paises_pares(digrafo, ruta, funcion="verificar_existencia"): continue
-
                 nuevas = recorrer_ruta_paises_pares(digrafo, ruta, funcion="agregar_conexiones")
+
                 if not nuevas: continue
 
                 recomendaciones.append({
-                    "escala": f"{escala1} -> {escala2}",
+                    "escala": escala1,
                     "ruta": ruta,
                     "distancia_total": distancia_total,
                     "limite": limite,
                     "conexiones_nuevas": nuevas
                 })
+                if len(recomendaciones) == 10: break
+            case "dos_escalas":
+                for escala2 in paises:
+                    ruta = list([origen, escala1, escala2, destino])
+                    ruta_valida, _ = validar_ruta(ruta)
+                    
+                    if not ruta_valida: continue
+                    cumple_margen, distancia_total, limite = verificar_margen_desvio(digrafo, ruta)
 
+                    if not cumple_margen: continue
+                    if recorrer_ruta_paises_pares(digrafo, ruta, funcion="verificar_existencia"): continue
+                    nuevas = recorrer_ruta_paises_pares(digrafo, ruta, funcion="agregar_conexiones")
+
+                    if not nuevas: continue
+                    recomendaciones.append({
+                        "escala": f"{escala1} -> {escala2}",
+                        "ruta": ruta,
+                        "distancia_total": distancia_total,
+                        "limite": limite,
+                        "conexiones_nuevas": nuevas
+                    })
+                    
+                    if len(recomendaciones) == 10: break
     recomendaciones.sort(key=lambda x: x["distancia_total"])
     return recomendaciones
 
 def agregar_rutas_escalas(matriz, digrafo, ruta):
     if len(ruta) not in (3, 4): return False, "La ruta debe tener una o dos escalas"
-
     valido, mensaje = validar_ruta(ruta)
-    if not valido: return False, mensaje
 
+    if not valido: return False, mensaje
     cumple_margen, _, _ = verificar_margen_desvio(digrafo, ruta)
+
     if not cumple_margen: return False, "La ruta no cumple con el margen de desvio permitido"
     if recorrer_ruta_paises_pares(digrafo, ruta, funcion="verificar_existencia"): return False, "La ruta ya existe en la matriz de conexiones"
-
     nuevas_conexiones = recorrer_ruta_paises_pares(digrafo, ruta, funcion="agregar_conexiones")
+
     for origen, destino in nuevas_conexiones:
-        fila, columna = paises.index(origen), paises.index(destino)
+        fila = paises.index(origen)
+        columna = paises.index(destino)
+
         matriz[fila][columna] = 1
         digrafo["aristas"][(origen, destino)]["existe"] = True
-    
+
     texto_ruta = " -> ".join(ruta)
     return True, f"Ruta agregada correctamente: {texto_ruta}"
 
@@ -310,11 +318,9 @@ def dibujar_grafo(ruta, contenedor):
 
     for i, pais in enumerate(ruta):
         nombre_nodo = f"n{i}"
-
         if i == 0: color = "#2E8B57"
         elif i == len(ruta) - 1: color = "#D94B4B"
         else: color = "#4DA6FF"
-
         dot.node(
             nombre_nodo,
             label="",
@@ -327,20 +333,19 @@ def dibujar_grafo(ruta, contenedor):
             fillcolor=color,
             color="#7A7A7A"
         )
-
     for i in range(len(ruta) - 1): dot.edge(f"n{i}", f"n{i + 1}")
     contenedor.graphviz_chart(dot)
 
 def construir_datos_mapa_digrafo(digrafo):
-    nodos, aristas = list(digrafo["nodos"].values()), list()
+    nodos = list(digrafo["nodos"].values())
+    aristas = list()
     pares_procesados = set()
 
     for (origen, destino), arista in digrafo["aristas"].items():
         if not arista["existe"]: continue
-
         par = frozenset([origen, destino])
-        if par in pares_procesados: continue
 
+        if par in pares_procesados: continue
         pares_procesados.add(par)
         arista_vuelta = digrafo["aristas"].get((destino, origen))
         existe_vuelta = arista_vuelta is not None and arista_vuelta["existe"]
@@ -387,7 +392,6 @@ def dibujar_mapa_digrafo_interno(digrafo, contenedor):
         pickable=False
     )
 
-
     latitudes = [nodo["latitud"] for nodo in nodos]
     longitudes = [nodo["longitud"] for nodo in nodos]
 
@@ -411,18 +415,18 @@ def dibujar_mapa_digrafo_interno(digrafo, contenedor):
             }
         }
     )
+
     contenedor.pydeck_chart(mapa, height=550)
 
 def dibujar_mapa(ruta, contenedor):
     lineas = list()
     puntos = list()
     distancia = len(ruta)
-
     colores_nodos = list()
     for i in range(distancia):
         t = 0 if distancia == 1 else i / (distancia - 1)
         colores_nodos.append(interpolar_color(t))
-    
+
     for i, pais in enumerate(ruta):
         longitud, latitud = coordenadas_paises[pais]
         puntos.append({
@@ -433,7 +437,9 @@ def dibujar_mapa(ruta, contenedor):
         })
 
     for j in range(distancia - 1):
-        origen, destino = coordenadas_paises[ruta[j]], coordenadas_paises[ruta[j + 1]]
+        origen = coordenadas_paises[ruta[j]]
+        destino = coordenadas_paises[ruta[j + 1]]
+
         lineas.append({
             "from": origen,
             "to": destino,
@@ -448,7 +454,7 @@ def dibujar_mapa(ruta, contenedor):
         get_target_position="to",
         get_source_color="source_color",
         get_target_color="target_color",
-        get_width=4,
+        get_width=4
     )
 
     capa_puntos = pdk.Layer(
@@ -457,11 +463,11 @@ def dibujar_mapa(ruta, contenedor):
         get_position="[longitud, latitud]",
         get_fill_color="color",
         get_radius=100000,
-        pickable=True,
+        pickable=True
     )
 
     latitudes = [coordenadas_paises[pais][1] for pais in ruta]
-    longitudes = [coordenadas_paises [pais][0] for pais in ruta]
+    longitudes = [coordenadas_paises[pais][0] for pais in ruta]
 
     vista = pdk.ViewState(
         latitude=sum(latitudes) / len(latitudes),
@@ -475,8 +481,10 @@ def dibujar_mapa(ruta, contenedor):
         map_style="dark",
         tooltip={
             "html": "<b>{pais}</b>",
-            "style": {"color": "white"}
+            "style": {
+                "color": "white"
+            }
         }
     )
-
+    
     contenedor.pydeck_chart(mapa, height=500)

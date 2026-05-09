@@ -1,10 +1,101 @@
 origen,destino
-Perú,Chile
+Peru,Chile
+Peru,Ecuador
+Peru,Bolivia
+Peru,Colombia
+Chile,Argentina
 Argentina,Brasil
-Colombia,México
-Bolivia,Perú
-Uruguay,Costa Rica
-Panamá,Colombia
-Paraguay,Bolivia
-Ecuador,Bolivia
+Argentina,Uruguay
+Brasil,Uruguay
 Brasil,Colombia
+Brasil,Venezuela
+Bolivia,Paraguay
+Paraguay,Uruguay
+Ecuador,Colombia
+Colombia,Venezuela
+Colombia,Panama
+Panama,Costa rica
+Costa rica,Nicaragua
+Nicaragua,Honduras
+Honduras,El salvador
+El salvador,Guatemala
+Guatemala,Mexico
+Mexico,Estados unidos
+Estados unidos,Canada
+Mexico,Cuba
+Cuba,Republica dominicana
+Estados unidos,Cuba
+Estados unidos,Republica dominicana
+Peru,Espana
+Colombia,Espana
+Mexico,Espana
+Portugal,Brasil
+Espana,Argentina
+Reino unido,Estados unidos
+Francia,Estados unidos
+Reino unido,Canada
+Portugal,Espana
+Francia,Espana
+Reino unido,Francia
+Belgica,Francia
+Paises bajos,Belgica
+Alemania,Paises bajos
+Dinamarca,Alemania
+Suecia,Dinamarca
+Noruega,Suecia
+Polonia,Alemania
+Republica checa,Alemania
+Austria,Republica checa
+Suiza,Austria
+Italia,Suiza
+Grecia,Italia
+Turquia,Grecia
+Rusia,Polonia
+Rusia,Turquia
+Marruecos,Espana
+Argelia,Francia
+Egipto,Italia
+Israel,Turquia
+Arabia saudita,Turquia
+Emiratos arabes unidos,Reino unido
+Argelia,Marruecos
+Egipto,Argelia
+Etiopia,Egipto
+Kenia,Etiopia
+Sudafrica,Kenia
+Nigeria,Ghana
+Ghana,Senegal
+Senegal,Marruecos
+Nigeria,Kenia
+Nigeria,Sudafrica
+Israel,Egipto
+Israel,Qatar
+Qatar,Emiratos arabes unidos
+Emiratos arabes unidos,Arabia saudita
+Emiratos arabes unidos,India
+Qatar,India
+India,Tailandia
+India,China
+China,Corea del sur
+Japon,Corea del sur
+Japon,China
+Vietnam,China
+Tailandia,Vietnam
+Malasia,Tailandia
+Singapur,Malasia
+Indonesia,Singapur
+Indonesia,Malasia
+Filipinas,Singapur
+Japon,Filipinas
+China,Rusia
+Japon,Estados unidos
+China,Estados unidos
+Australia,Estados unidos
+Japon,Canada
+Nueva zelanda,Australia
+Fiyi,Australia
+Nueva zelanda,Fiyi
+Australia,Singapur
+Australia,Indonesia
+Australia,Japon
+Australia,Chile

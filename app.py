@@ -65,6 +65,7 @@ def inicializar_estado():
     if "origen_busqueda" not in st.session_state: st.session_state.origen_busqueda = None
     if "destino_busqueda" not in st.session_state: st.session_state.destino_busqueda = None
     if "mensaje_agregar" not in st.session_state: st.session_state.mensaje_agregar = None
+    if "digrafo_interno" not in st.session_state: st.session_state.digrafo_interno = construir_digrafo_interno(st.session_state.matriz)
 
 def limpiar_busqueda():
     st.session_state.resultado_busqueda = None
@@ -90,10 +91,10 @@ def mostrar_mensaje_panel(texto):
 def mostrar_botones_rutas(titulo, rutas):
     if not rutas: return
     st.markdown(titulo)
+
     for i, ruta in enumerate(rutas):
         texto = " → ".join(ruta)
-        if st.button(texto, use_container_width=True, key=f"ruta_{titulo}_{i}_{texto}"):
-            st.session_state.ruta_seleccionada = ruta
+        if st.button(texto, use_container_width=True, key=f"ruta_{titulo}_{i}_{texto}"): st.session_state.ruta_seleccionada = ruta
 
 def mostrar_resultados(resultado):
     analisis = resultado["analisis"]
@@ -122,16 +123,17 @@ def mostrar_resultados(resultado):
     mostrar_botones_rutas("### 🛫 Rutas con 1 escala", resultado["una_escala"])
     mostrar_botones_rutas("### 🛬 Rutas con 2 escalas", resultado["dos_escalas"])
 
-    if not (resultado["directas"] or resultado["una_escala"] or resultado["dos_escalas"]):
-        st.info("La matriz detectó conectividad, pero no se encontraron rutas válidas sin repetir países.")
+    if not (resultado["directas"] or resultado["una_escala"] or resultado["dos_escalas"]): st.info("La matriz detectó conectividad, pero no se encontraron rutas válidas sin repetir países.")
 
 def mostrar_recomendaciones(recomendaciones, digrafo_interno):
     if not recomendaciones:
         st.info("No se encontraron rutas disponibles para agregar con las opciones seleccionadas")
         return
+
     st.markdown("### Recomendaciones disponibles")
 
     columnas = st.columns(2)
+
     for i, recomendacion in enumerate(recomendaciones):
         ruta = recomendacion["ruta"]
         escala = recomendacion["escala"]
@@ -145,6 +147,7 @@ def mostrar_recomendaciones(recomendaciones, digrafo_interno):
                 st.caption(f"Distancia: {distancia_total:.0f} km / Límite: {limite:.0f} km")
 
                 boton1, boton2 = st.columns(2)
+
                 with boton1:
                     if st.button("Visualizar ruta", use_container_width=True, key=f"visualizar_{i}_{'_'.join(ruta)}"):
                         st.session_state.ruta_seleccionada = ruta
@@ -160,14 +163,14 @@ def mostrar_recomendaciones(recomendaciones, digrafo_interno):
                         if agregado:
                             st.session_state.ruta_seleccionada = ruta
                             st.session_state.resultado_busqueda = None
+
                         st.rerun()
 
 def main():
     aplicar_estilos()
     mostrar_encabezado()
     inicializar_estado()
-
-    digrafo_interno = construir_digrafo_interno(st.session_state.matriz)
+    digrafo_interno = st.session_state.digrafo_interno
 
     columna_main, columna_panel = st.columns([2.2, 1], gap="large")
 
@@ -180,17 +183,18 @@ def main():
 
         with tabla1:
             st.subheader("Buscar rutas entre países")
-            
+
             origen_actual = st.session_state.get("origen_busqueda")
             destino_actual = st.session_state.get("destino_busqueda")
 
             if destino_actual is not None: opciones_origen = calcular_origenes_destinos(st.session_state.matriz, destino=destino_actual)
             else: opciones_origen = paises
-            
+
             if origen_actual is not None: opciones_destino = calcular_origenes_destinos(st.session_state.matriz, origen=origen_actual)
             else: opciones_destino = paises
 
             bloque1, bloque2 = st.columns(2)
+
             with bloque1:
                 origen = st.selectbox(
                     "País de origen",
@@ -199,6 +203,7 @@ def main():
                     placeholder="Ingrese un origen",
                     key="origen_busqueda"
                 )
+
             with bloque2:
                 destino = st.selectbox(
                     "País de destino",
@@ -207,7 +212,7 @@ def main():
                     placeholder="Ingrese un destino",
                     key="destino_busqueda"
                 )
-            
+
             if st.button("Buscar rutas", use_container_width=True):
                 valido, mensaje = validar_origen_destino(origen, destino)
 
@@ -216,7 +221,7 @@ def main():
                     limpiar_busqueda()
                 else:
                     analisis = analizar_conectividad_matricial(st.session_state.matriz, origen, destino)
-                    
+
                     st.session_state.resultado_busqueda = {
                         "analisis": analisis,
                         "directas": buscar_rutas(analisis["A"], origen, destino, tipo_ruta="directa"),
@@ -233,8 +238,9 @@ def main():
             if st.session_state.mensaje_agregar:
                 st.info(st.session_state.mensaje_agregar)
                 st.session_state.mensaje_agregar = None
-            
+
             bloque1, bloque2 = st.columns(2)
+
             with bloque1:
                 origen_nuevo = st.selectbox(
                     "Origen",
@@ -252,20 +258,30 @@ def main():
                     placeholder="Ingrese un destino",
                     key="destino_nuevo"
                 )
-            
+
             tipo_visual = st.radio(
                 "Tipo de ruta que desea agregar",
                 ["Con 1 escala", "Con 2 escalas"],
                 horizontal=True
             )
 
-            if tipo_visual == "Con 1 escala": tipo_ruta_agregar = "una_escala"
-            if tipo_visual == "Con 2 escalas": tipo_ruta_agregar = "dos_escalas"
+            if tipo_visual == "Con 1 escala":
+                tipo_ruta_agregar = "una_escala"
+            else:
+                tipo_ruta_agregar = "dos_escalas"
 
             valido, mensaje = validar_origen_destino(origen_nuevo, destino_nuevo)
-            if not valido: st.warning(mensaje)
+
+            if not valido:
+                st.warning(mensaje)
             else:
-                recomendaciones = cargar_recomendaciones(digrafo_interno, origen_nuevo, destino_nuevo, tipo_ruta=tipo_ruta_agregar)
+                recomendaciones = cargar_recomendaciones(
+                    digrafo_interno,
+                    origen_nuevo,
+                    destino_nuevo,
+                    tipo_ruta=tipo_ruta_agregar
+                )
+
                 mostrar_recomendaciones(recomendaciones, digrafo_interno)
 
         with tabla3:
@@ -280,7 +296,7 @@ def main():
             st.dataframe(df_matriz, use_container_width=True)
 
             st.divider()
-            st.subheader("Dígrafo dirigido interno del sistema (Por ahora se ve solo pa verificar aña)")
+            st.subheader("Dígrafo dirigido interno del sistema")
 
             dibujar_mapa_digrafo_interno(digrafo_interno, st)
 
@@ -289,18 +305,20 @@ def main():
         st.caption("🟢 Origen   🔵 Escala   🔴 Destino")
 
         if st.session_state.ruta_seleccionada:
-            st.markdown(f"**Ruta seleccionada:** { ' → '.join(st.session_state.ruta_seleccionada)}")
+            st.markdown(f"**Ruta seleccionada:** {' → '.join(st.session_state.ruta_seleccionada)}")
 
             _, centro, _ = st.columns(3)
-            with centro: dibujar_grafo(st.session_state.ruta_seleccionada, st)
-        else: mostrar_mensaje_panel("✈️ Selecciona una ruta para visualizar el grafo")
+
+            with centro:
+                dibujar_grafo(st.session_state.ruta_seleccionada, st)
+        else:
+            mostrar_mensaje_panel("✈️ Selecciona una ruta para visualizar el grafo")
 
         st.divider()
         st.subheader("🌍 Mapa interactivo")
 
         if st.session_state.ruta_seleccionada: dibujar_mapa(st.session_state.ruta_seleccionada, st)
         else: mostrar_mensaje_panel("✈️ Selecciona una ruta para visualizar el mapa")
-
 
 if __name__ == "__main__":
     main()
