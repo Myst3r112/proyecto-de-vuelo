@@ -3,7 +3,7 @@ import streamlit as st
 from logica import *
 
 st.set_page_config(
-    page_title="Rutas Aéreas",
+    page_title='Rutas Aereas',
     page_icon="🛩️",
     layout="wide"
 )
@@ -171,9 +171,8 @@ def main():
     mostrar_encabezado()
     inicializar_estado()
     digrafo_interno = st.session_state.digrafo_interno
-
+    
     columna_main, columna_panel = st.columns([2.2, 1], gap="large")
-
     with columna_main:
         tabla1, tabla2, tabla3 = st.tabs([
             "🔎 Buscar rutas",
@@ -187,10 +186,20 @@ def main():
             origen_actual = st.session_state.get("origen_busqueda")
             destino_actual = st.session_state.get("destino_busqueda")
 
-            if destino_actual is not None: opciones_origen = calcular_origenes_destinos(st.session_state.matriz, destino=destino_actual)
+            if destino_actual is not None: 
+                opciones_origen = calcular_origenes_destinos(
+                    st.session_state.matriz, 
+                    destino=destino_actual,
+                    digrafo=digrafo_interno
+                    )
             else: opciones_origen = paises
 
-            if origen_actual is not None: opciones_destino = calcular_origenes_destinos(st.session_state.matriz, origen=origen_actual)
+            if origen_actual is not None: 
+                opciones_destino = calcular_origenes_destinos(
+                    st.session_state.matriz, 
+                    origen=origen_actual,
+                    digrafo=digrafo_interno
+                    )
             else: opciones_destino = paises
 
             bloque1, bloque2 = st.columns(2)
@@ -224,9 +233,27 @@ def main():
 
                     st.session_state.resultado_busqueda = {
                         "analisis": analisis,
-                        "directas": buscar_rutas(analisis["A"], origen, destino, tipo_ruta="directa"),
-                        "una_escala": buscar_rutas(analisis["A"], origen, destino, tipo_ruta="una_escala"),
-                        "dos_escalas": buscar_rutas(analisis["A"], origen, destino, tipo_ruta="dos_escalas")
+                        "directas": buscar_rutas(
+                            analisis["A"],
+                            origen,
+                            destino,
+                            tipo_ruta="directa",
+                            digrafo=digrafo_interno
+                        ),
+                        "una_escala": buscar_rutas(
+                            analisis["A"],
+                            origen,
+                            destino,
+                            tipo_ruta="una_escala",
+                            digrafo=digrafo_interno
+                        ),
+                        "dos_escalas": buscar_rutas(
+                            analisis["A"],
+                            origen,
+                            destino,
+                            tipo_ruta="dos_escalas",
+                            digrafo=digrafo_interno
+                        )
                     }
                     st.session_state.ruta_seleccionada = None
 
@@ -275,13 +302,7 @@ def main():
             if not valido:
                 st.warning(mensaje)
             else:
-                recomendaciones = cargar_recomendaciones(
-                    digrafo_interno,
-                    origen_nuevo,
-                    destino_nuevo,
-                    tipo_ruta=tipo_ruta_agregar
-                )
-
+                recomendaciones = cargar_recomendaciones(digrafo_interno, origen_nuevo, destino_nuevo, tipo_ruta=tipo_ruta_agregar)
                 mostrar_recomendaciones(recomendaciones, digrafo_interno)
 
         with tabla3:
@@ -297,8 +318,7 @@ def main():
 
             st.divider()
             st.subheader("Dígrafo dirigido interno del sistema")
-
-            dibujar_mapa_digrafo_interno(digrafo_interno, st)
+            dibujar_mapa(st, digrafo=digrafo_interno)
 
     with columna_panel:
         st.subheader("🧭 Visualización de la ruta")
@@ -317,7 +337,7 @@ def main():
         st.divider()
         st.subheader("🌍 Mapa interactivo")
 
-        if st.session_state.ruta_seleccionada: dibujar_mapa(st.session_state.ruta_seleccionada, st)
+        if st.session_state.ruta_seleccionada: dibujar_mapa(st, ruta=st.session_state.ruta_seleccionada)
         else: mostrar_mensaje_panel("✈️ Selecciona una ruta para visualizar el mapa")
 
 if __name__ == "__main__":

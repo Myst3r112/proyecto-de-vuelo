@@ -17,6 +17,7 @@ import pydeck as pdk
 from graphviz import Digraph
 import math
 
+### Funciones auxiliares para cargar datos e imagens, y hacer calculos ####
 def cargar_imagen(ruta):
     with open(ruta, "rb") as archivo: data = archivo.read()
     return base64.b64encode(data).decode()
@@ -82,11 +83,13 @@ def formula_haversine(coordenada1, coordenada2):
 
     return radio_tierra * c
 
+### Variables globales ####
 coordenadas_paises = cargar_datos_csv("datos/coordenadas_paises.csv", tipo_dato="coordenadas")
 conexiones = cargar_datos_csv("datos/conexiones.csv", tipo_dato="conexiones")
 paises = [pais for pais in coordenadas_paises.keys()]
 MARGEN_DESVIO = 0.03
 
+### Funcones para contruir y analizar la matriz de conectividad ###
 def crear_matriz(dimension) -> np.ndarray:
     matriz = np.zeros((dimension, dimension), dtype=int)
 
@@ -137,47 +140,90 @@ def analizar_conectividad_matricial(matriz, origen, destino):
         "hay_conectividad": directa or una_escala or dos_escalas
     }
 
-def calcular_origenes_destinos(matriz, *, origen=None, destino=None) -> list:
-    opciones = list()
-    A, A2, A3 = calcular_conectividad(matriz)
-    conectividad_total = A + A2 + A3
-
-    if origen is not None:
-        i = paises.index(origen)
-        for j, pais in enumerate(paises):
-            if pais == origen: continue
-            if conectividad_total[i][j] != 0: opciones.append(pais)
-    elif destino is not None:
-        j = paises.index(destino)
-        for i, pais in enumerate(paises):
-            if pais == destino: continue
-            if conectividad_total[i][j] != 0: opciones.append(pais)
-    else: opciones = paises
-
-    return opciones
-
-def buscar_rutas(matriz, origen, destino, *, tipo_ruta: str) -> list:
+### Buscar origenes y destinos con conexion
+def buscar_rutas(matriz, origen, destino, *, tipo_ruta: str, digrafo=None) -> list:
     rutas = list()
     i, j = paises.index(origen), paises.index(destino)
+
     match tipo_ruta:
         case "directa":
-            if matriz[i][j]: rutas.append([origen, destino])
+            if matriz[i][j]:
+                ruta = [origen, destino]
+
+                if digrafo is None: rutas.append(ruta)
+                else:
+                    cumple_margen, _, _ = verificar_margen_desvio(digrafo, ruta)
+                    if cumple_margen: rutas.append(ruta)
+            pass
         case "una_escala":
-            for k, escala in enumerate(paises):
-                if escala in (origen, destino): continue
-                if matriz[i][k] and matriz[k][j]: rutas.append([origen, escala, destino])
+            for k, escala1 in enumerate(paises):
+                if escala1 in (origen, destino): continue
+                if matriz[i][k] and matriz[k][j]:
+                    ruta = [origen, escala1, destino]
+                    if digrafo is None:rutas.append(ruta)
+                    else:
+                        cumple_margen, _, _ = verificar_margen_desvio(digrafo, ruta)
+                        if cumple_margen: rutas.append(ruta)
+            pass
         case "dos_escalas":
             for k, escala1 in enumerate(paises):
                 for l, escala2 in enumerate(paises):
                     if len({origen, escala1, escala2, destino}) != 4: continue
-                    if matriz[i][k] and matriz[k][l] and matriz[l][j]: rutas.append([origen, escala1, escala2, destino])
+                    if matriz[i][k] and matriz[k][l] and matriz[l][j]:
+                        ruta = [origen, escala1, escala2, destino]
+                        if digrafo is None: rutas.append(ruta)
+                        else:
+                            cumple_margen, _, _ = verificar_margen_desvio(digrafo, ruta)
+                            if cumple_margen: rutas.append(ruta)
+            pass
     return rutas
 
-def distancia_entre_paises(pais1, pais2):
-    coordenadas1 = coordenadas_paises[pais1]
-    coordenadas2 = coordenadas_paises[pais2]
-    return formula_haversine(coordenadas1, coordenadas2)
+def calcular_origenes_destinos(matriz, *, origen=None, destino=None, digrafo=None) -> list:
+    opciones = set()
+    A, _, _ = calcular_conectividad(matriz)
 
+    if origen is not None:
+        for posible_destino in paises:
+            if posible_destino == origen: continue
+
+            rutas = buscar_rutas(A, origen, posible_destino, tipo_ruta="directa", digrafo=digrafo)
+            if rutas:
+                opciones.add(posible_destino)
+                continue
+
+            rutas = buscar_rutas(A, origen, posible_destino, tipo_ruta="una_escala", digrafo=digrafo)
+            if rutas:
+                opciones.add(posible_destino)
+                continue
+
+            rutas = buscar_rutas(A, origen, posible_destino, tipo_ruta="dos_escalas", digrafo=digrafo)
+            if rutas:
+                opciones.add(posible_destino)
+
+    elif destino is not None:
+        for posible_origen in paises:
+            if posible_origen == destino: continue
+
+            rutas = buscar_rutas(A, posible_origen, destino, tipo_ruta="directa", digrafo=digrafo)
+            if rutas:
+                opciones.add(posible_origen)
+                continue
+
+            rutas = buscar_rutas(A, posible_origen, destino, tipo_ruta="una_escala", digrafo=digrafo)
+            if rutas:
+                opciones.add(posible_origen)
+                continue
+
+            rutas = buscar_rutas(A, posible_origen, destino, tipo_ruta="dos_escalas", digrafo=digrafo)
+            if rutas:
+                opciones.add(posible_origen)
+
+    else:
+        return list(paises)
+
+    return sorted(list(opciones))
+
+### Funciones para construir y calcular el digrafo interno ###
 def construir_digrafo_interno(matriz):
     digrafo = {
         "nodos": dict(),
@@ -208,7 +254,6 @@ def construir_digrafo_interno(matriz):
                 "distancia": distancia,
                 "existe": matriz[i][j] == 1
             }
-
     return digrafo
 
 def calcular_distancia_ruta(digrafo, ruta):
@@ -223,16 +268,15 @@ def verificar_margen_desvio(digrafo, ruta, *, margen: float = MARGEN_DESVIO):
     limite = distancia_directa * (1 + margen)
     return distancia_total <= limite, distancia_total, limite
 
+### Funciones para agregar rutas ###
 def recorrer_ruta_paises_pares(digrafo, ruta, *, funcion: str):
     nuevas = list()
     for i in range(len(ruta) - 1):
         origen = ruta[i]
         destino = ruta[i + 1]
         arista = digrafo["aristas"][(origen, destino)]
-        if funcion == "verificar_existencia":
-            if not arista["existe"]: return False
-        if funcion == "agregar_conexiones":
-            if not arista["existe"]: nuevas.append((origen, destino))
+        if funcion == "verificar_existencia" and not arista["existe"]: return False
+        if funcion == "agregar_conexiones" and not arista["existe"]: nuevas.append((origen, destino))
 
     if funcion == "verificar_existencia": return True
     if funcion == "agregar_conexiones": return nuevas
@@ -310,6 +354,7 @@ def agregar_rutas_escalas(matriz, digrafo, ruta):
     texto_ruta = " -> ".join(ruta)
     return True, f"Ruta agregada correctamente: {texto_ruta}"
 
+### Funciones para visualizacion en graphviz ###
 def dibujar_grafo(ruta, contenedor):
     dot = Digraph()
     dot.attr(rankdir="TB")
@@ -336,10 +381,10 @@ def dibujar_grafo(ruta, contenedor):
     for i in range(len(ruta) - 1): dot.edge(f"n{i}", f"n{i + 1}")
     contenedor.graphviz_chart(dot)
 
-def construir_datos_mapa_digrafo(digrafo):
+### Funciones para visualizacion en el mapa ###
+def construir_datos_digrafo_interno(digrafo):
     nodos = list(digrafo["nodos"].values())
-    aristas = list()
-    pares_procesados = set()
+    aristas, pares_procesados = list(), set()
 
     for (origen, destino), arista in digrafo["aristas"].items():
         if not arista["existe"]: continue
@@ -370,66 +415,16 @@ def construir_datos_mapa_digrafo(digrafo):
 
     return nodos, aristas
 
-def dibujar_mapa_digrafo_interno(digrafo, contenedor):
-    nodos, aristas = construir_datos_mapa_digrafo(digrafo)
-
-    capa_aristas = pdk.Layer(
-        "LineLayer",
-        data=aristas,
-        get_source_position="from",
-        get_target_position="to",
-        get_color="color",
-        get_width=3,
-        pickable=True
-    )
-
-    capa_nodos = pdk.Layer(
-        "ScatterplotLayer",
-        data=nodos,
-        get_position="[longitud, latitud]",
-        get_fill_color="color",
-        get_radius=900,
-        pickable=False
-    )
-
-    latitudes = [nodo["latitud"] for nodo in nodos]
-    longitudes = [nodo["longitud"] for nodo in nodos]
-
-    vista = pdk.ViewState(
-        latitude=sum(latitudes) / len(latitudes),
-        longitude=sum(longitudes) / len(longitudes),
-        zoom=2.4
-    )
-
-    mapa = pdk.Deck(
-        layers=[capa_aristas, capa_nodos],
-        initial_view_state=vista,
-        map_style="dark",
-        tooltip={
-            "html": """
-                <b>{tramo}</b><br/>
-                Distancia: {distancia}
-            """,
-            "style": {
-                "color": "white"
-            }
-        }
-    )
-
-    contenedor.pydeck_chart(mapa, height=550)
-
-def dibujar_mapa(ruta, contenedor):
-    lineas = list()
-    puntos = list()
+def construir_datos_ruta(ruta):
+    nodos, aristas, colores_nodos = list(), list(), list()
     distancia = len(ruta)
-    colores_nodos = list()
     for i in range(distancia):
         t = 0 if distancia == 1 else i / (distancia - 1)
         colores_nodos.append(interpolar_color(t))
 
     for i, pais in enumerate(ruta):
         longitud, latitud = coordenadas_paises[pais]
-        puntos.append({
+        nodos.append({
             "pais": pais,
             "longitud": longitud,
             "latitud": latitud,
@@ -440,39 +435,63 @@ def dibujar_mapa(ruta, contenedor):
         origen = coordenadas_paises[ruta[j]]
         destino = coordenadas_paises[ruta[j + 1]]
 
-        lineas.append({
+        aristas.append({
             "from": origen,
             "to": destino,
             "source_color": colores_nodos[j],
             "target_color": colores_nodos[j + 1]
         })
+    
+    return nodos, aristas
 
-    capa_lineas = pdk.Layer(
-        "ArcLayer",
-        data=lineas,
-        get_source_position="from",
-        get_target_position="to",
-        get_source_color="source_color",
-        get_target_color="target_color",
-        get_width=4
-    )
+def dibujar_mapa(contenedor, *, ruta=None, digrafo=None):
+    if digrafo is not None:
+        nodos, aristas = construir_datos_digrafo_interno(digrafo)
+        tooltip_html = "<b>{tramo}</b><br/>Distancia: {distancia}"
+        radio_nodo=900
+        nodo_pickable=False
+        
+        capa_lineas = pdk.Layer(
+           "LineLayer",
+           data=aristas,
+           get_source_position="from",
+           get_target_position="to",
+           get_color="color",
+           get_width=4,
+           pickable=True
+        )
+    if ruta is not None:
+        nodos, aristas = construir_datos_ruta(ruta)
+        tooltip_html = "<b>{pais}</b>"
+        radio_nodo=20000
+        nodo_pickable=True
+        
+        capa_lineas = pdk.Layer(
+            "ArcLayer",
+            data=aristas,
+            get_source_position="from",
+            get_target_position="to",
+            get_source_color="source_color",
+            get_target_color="target_color",
+            get_width=4,
+            pickable=False
+        )
 
     capa_puntos = pdk.Layer(
         "ScatterplotLayer",
-        data=puntos,
+        data=nodos,
         get_position="[longitud, latitud]",
         get_fill_color="color",
-        get_radius=100000,
-        pickable=True
+        get_radius=radio_nodo,
+        pickable=nodo_pickable
     )
-
-    latitudes = [coordenadas_paises[pais][1] for pais in ruta]
-    longitudes = [coordenadas_paises[pais][0] for pais in ruta]
+    latitudes = [nodo["latitud"] for nodo in nodos]
+    longitudes = [nodo["longitud"] for nodo in nodos]
 
     vista = pdk.ViewState(
-        latitude=sum(latitudes) / len(latitudes),
-        longitude=sum(longitudes) / len(longitudes),
-        zoom=3
+        latitude = sum(latitudes) / len(latitudes),
+        longitude = sum(longitudes) / len(longitudes),
+        zoom = 2
     )
 
     mapa = pdk.Deck(
@@ -480,11 +499,10 @@ def dibujar_mapa(ruta, contenedor):
         initial_view_state=vista,
         map_style="dark",
         tooltip={
-            "html": "<b>{pais}</b>",
+            "html": tooltip_html,
             "style": {
                 "color": "white"
             }
         }
     )
-    
     contenedor.pydeck_chart(mapa, height=500)
