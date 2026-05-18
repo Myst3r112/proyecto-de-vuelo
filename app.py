@@ -1,7 +1,16 @@
 import pandas as pd
 import streamlit as st
-from logica import *
-
+from utils import cargar_imagen
+from data import paises
+from matriz import crear_matriz, calcular_origenes_destinos, analizar_conectividad_matricial
+from digrafo import construir_digrafo_interno
+from busqueda import (
+    buscar_rutas,
+    validar_origen_destino,
+    cargar_recomendaciones,
+    agregar_rutas_escalas,
+)
+from visualizacion import dibujar_mapa, dibujar_grafo
 st.set_page_config(
     page_title='Rutas Aereas',
     page_icon="🛩️",
