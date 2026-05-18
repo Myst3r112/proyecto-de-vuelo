@@ -66,7 +66,7 @@ def mostrar_encabezado():
             box-shadow: 0 4px 12px rgba(0,0,0,0.25);
        ">
             <h1 style="margin: 0; font-size: 32px;">
-                🛩️ Aero Skibidis 🛩️
+                🛩️ Aerolineas Skibidis 🛩️
             </h1>
             <p style="margin: 8px 0 0 0; font-size: 16px;">
                 Proyecto de Matemática Discreta: análisis de rutas mediante matrices de conectividad y grafos.
@@ -178,7 +178,6 @@ def mostrar_resultados(resultado, digrafo_interno):
 def mostrar_contenido_cotizacion(ruta, digrafo_interno):
     texto_ruta = " → ".join(ruta)
     st.markdown(f"**Ruta seleccionada:** {texto_ruta}")
-    st.caption("Precios referenciales calculados localmente para el proyecto.")
 
     tipo_viaje, pasajeros = st.columns([1.4, 1], vertical_alignment="bottom")
 
@@ -229,19 +228,16 @@ def mostrar_contenido_cotizacion(ruta, digrafo_interno):
         st.metric("Distancia", f"{precio['distancia_total']:.0f} km")
         st.caption(f"{precio['segmentos']} tramo(s), {precio['escalas']} escala(s)")
 
-    st.dataframe(
+    st.table(
         pd.DataFrame(calcular_comparacion_tarifas(
             digrafo_interno,
             ruta,
             tipo_viaje=seleccion_viaje,
             pasajeros=cantidad_pasajeros,
-        )),
-        use_container_width=True,
-        hide_index=True,
+        ))
     )
 
     confirmar, cerrar = st.columns(2)
-
     with confirmar:
         if st.button("Confirmar tarifa", use_container_width=True):
             st.session_state.tarifa_confirmada = {
@@ -460,10 +456,6 @@ def main():
             )
 
             st.dataframe(df_matriz, use_container_width=True)
-
-            st.divider()
-            st.subheader("Dígrafo dirigido interno del sistema")
-            dibujar_mapa(st, digrafo=digrafo_interno)
 
     with columna_panel:
         st.subheader("🧭 Visualización de la ruta")
