@@ -10,9 +10,15 @@ from busqueda import (
     cargar_recomendaciones,
     agregar_rutas_escalas,
 )
+from precios import (
+    CLASES_TARIFA,
+    calcular_comparacion_tarifas,
+    calcular_precio_ruta,
+    formatear_monto,
+)
 from visualizacion import dibujar_mapa, dibujar_grafo
 st.set_page_config(
-    page_title='Rutas Aereas',
+    page_title='Aerolineas Skibidi',
     page_icon="🛩️",
     layout="wide"
 )
@@ -34,6 +40,9 @@ def aplicar_estilos():
         div[data-testid="stDataFrame"] {
             border-radius: 12px;
             overflow: hidden;
+        }
+        div[data-testid="stDialog"] div[role="dialog"] {
+            width: min(760px, calc(100vw - 32px));
         }
         </style>
         """,
@@ -75,10 +84,12 @@ def inicializar_estado():
     if "destino_busqueda" not in st.session_state: st.session_state.destino_busqueda = None
     if "mensaje_agregar" not in st.session_state: st.session_state.mensaje_agregar = None
     if "digrafo_interno" not in st.session_state: st.session_state.digrafo_interno = construir_digrafo_interno(st.session_state.matriz)
+    if "tarifa_confirmada" not in st.session_state: st.session_state.tarifa_confirmada = None
 
 def limpiar_busqueda():
     st.session_state.resultado_busqueda = None
     st.session_state.ruta_seleccionada = None
+    st.session_state.tarifa_confirmada = None
 
 def mostrar_mensaje_panel(texto):
     st.markdown(
@@ -97,15 +108,44 @@ def mostrar_mensaje_panel(texto):
         unsafe_allow_html=True
     )
 
-def mostrar_botones_rutas(titulo, rutas):
+def seleccionar_ruta_para_cotizar(ruta):
+    st.session_state.ruta_seleccionada = ruta
+
+def mostrar_tarjetas_rutas(titulo, rutas, digrafo_interno):
     if not rutas: return
     st.markdown(titulo)
 
     for i, ruta in enumerate(rutas):
         texto = " → ".join(ruta)
-        if st.button(texto, use_container_width=True, key=f"ruta_{titulo}_{i}_{texto}"): st.session_state.ruta_seleccionada = ruta
+        precio_desde = calcular_precio_ruta(
+            digrafo_interno,
+            ruta,
+            tipo_viaje="Solo ida",
+            clase="Standard",
+            pasajeros=1,
+        )
 
-def mostrar_resultados(resultado):
+        with st.container(border=True):
+            boton_visualizar, boton_elegir, detalle_ruta = st.columns([1, 1, 3.2], vertical_alignment="center")
+
+            with boton_visualizar:
+                if st.button("Visualizar ruta", use_container_width=True, key=f"visualizar_busqueda_{titulo}_{i}"):
+                    st.session_state.ruta_seleccionada = ruta
+
+            with boton_elegir:
+                if st.button("Elegir ruta", use_container_width=True, key=f"elegir_busqueda_{titulo}_{i}"):
+                    seleccionar_ruta_para_cotizar(ruta)
+                    mostrar_contenido_cotizacion(ruta, digrafo_interno)
+
+            with detalle_ruta:
+                st.markdown(f"**{texto}**")
+                st.caption(
+                    f"{len(ruta) - 1} tramo(s) | "
+                    f"{precio_desde['distancia_total']:.0f} km | "
+                    f"desde {formatear_monto(precio_desde['total_usd'], 'USD')}"
+                )
+
+def mostrar_resultados(resultado, digrafo_interno):
     analisis = resultado["analisis"]
 
     st.divider()
@@ -128,11 +168,95 @@ def mostrar_resultados(resultado):
         st.info("No se encontraron rutas disponibles entre estos países hasta 2 escalas.")
         return
 
-    mostrar_botones_rutas("### ✈️ Rutas directas", resultado["directas"])
-    mostrar_botones_rutas("### 🛫 Rutas con 1 escala", resultado["una_escala"])
-    mostrar_botones_rutas("### 🛬 Rutas con 2 escalas", resultado["dos_escalas"])
+    mostrar_tarjetas_rutas("### ✈️ Rutas directas", resultado["directas"], digrafo_interno)
+    mostrar_tarjetas_rutas("### 🛫 Rutas con 1 escala", resultado["una_escala"], digrafo_interno)
+    mostrar_tarjetas_rutas("### 🛬 Rutas con 2 escalas", resultado["dos_escalas"], digrafo_interno)
 
     if not (resultado["directas"] or resultado["una_escala"] or resultado["dos_escalas"]): st.info("La matriz detectó conectividad, pero no se encontraron rutas válidas sin repetir países.")
+
+@st.dialog("Elegir ruta y tarifa")
+def mostrar_contenido_cotizacion(ruta, digrafo_interno):
+    texto_ruta = " → ".join(ruta)
+    st.markdown(f"**Ruta seleccionada:** {texto_ruta}")
+    st.caption("Precios referenciales calculados localmente para el proyecto.")
+
+    tipo_viaje, pasajeros = st.columns([1.4, 1], vertical_alignment="bottom")
+
+    with tipo_viaje:
+        seleccion_viaje = st.radio(
+            "Tipo de viaje",
+            ["Solo ida", "Ida y vuelta"],
+            horizontal=True,
+            key="cotizacion_tipo_viaje"
+        )
+
+    with pasajeros:
+        cantidad_pasajeros = st.number_input(
+            "Pasajeros",
+            min_value=1,
+            max_value=9,
+            value=1,
+            step=1,
+            key="cotizacion_pasajeros"
+        )
+
+    clase = st.radio(
+        "Clase",
+        list(CLASES_TARIFA.keys()),
+        horizontal=True,
+        key="cotizacion_clase"
+    )
+
+    precio = calcular_precio_ruta(
+        digrafo_interno,
+        ruta,
+        tipo_viaje=seleccion_viaje,
+        clase=clase,
+        pasajeros=cantidad_pasajeros,
+    )
+
+    total, por_persona, distancia = st.columns(3)
+
+    with total:
+        st.metric("Total", formatear_monto(precio["total_usd"], "USD"))
+        st.caption(formatear_monto(precio["total_pen"], "PEN"))
+
+    with por_persona:
+        st.metric("Por pasajero", formatear_monto(precio["total_persona_usd"], "USD"))
+        st.caption(f"Tasas: {formatear_monto(precio['tasas_persona_usd'], 'USD')}")
+
+    with distancia:
+        st.metric("Distancia", f"{precio['distancia_total']:.0f} km")
+        st.caption(f"{precio['segmentos']} tramo(s), {precio['escalas']} escala(s)")
+
+    st.dataframe(
+        pd.DataFrame(calcular_comparacion_tarifas(
+            digrafo_interno,
+            ruta,
+            tipo_viaje=seleccion_viaje,
+            pasajeros=cantidad_pasajeros,
+        )),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    confirmar, cerrar = st.columns(2)
+
+    with confirmar:
+        if st.button("Confirmar tarifa", use_container_width=True):
+            st.session_state.tarifa_confirmada = {
+                "ruta": ruta,
+                "tipo_viaje": seleccion_viaje,
+                "clase": clase,
+                "pasajeros": cantidad_pasajeros,
+                "total_usd": precio["total_usd"],
+                "total_pen": precio["total_pen"],
+            }
+            st.rerun()
+
+    with cerrar:
+        if st.button("Cerrar", use_container_width=True):
+            st.rerun()
 
 def mostrar_recomendaciones(recomendaciones, digrafo_interno):
     if not recomendaciones:
@@ -265,8 +389,20 @@ def main():
                         )
                     }
                     st.session_state.ruta_seleccionada = None
+                    st.session_state.tarifa_confirmada = None
 
-            if st.session_state.resultado_busqueda: mostrar_resultados(st.session_state.resultado_busqueda)
+            if st.session_state.tarifa_confirmada:
+                tarifa = st.session_state.tarifa_confirmada
+                st.success(
+                    "Tarifa confirmada: "
+                    f"{' → '.join(tarifa['ruta'])} | "
+                    f"{tarifa['tipo_viaje']} | "
+                    f"{tarifa['clase']} | "
+                    f"{tarifa['pasajeros']} pasajero(s) | "
+                    f"{formatear_monto(tarifa['total_usd'], 'USD')}"
+                )
+
+            if st.session_state.resultado_busqueda: mostrar_resultados(st.session_state.resultado_busqueda, digrafo_interno)
 
         with tabla2:
             st.subheader("Agregar nueva ruta aérea con escala")
