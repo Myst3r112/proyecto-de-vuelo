@@ -4,8 +4,10 @@ from utils import interpolar_color
 from data import *
 def dibujar_grafo(ruta, contenedor):
     dot = Digraph()
+    dot.attr("graph", bgcolor="transparent")
     dot.attr(rankdir="TB")
     dot.attr(ranksep="0.8")
+    dot.attr("node", fontcolor="#2563EB", fontsize="12", fontname="Arial")
     dot.attr("edge", color="#7A7A7A", penwidth="1.8", arrowsize="0.7")
 
     for i, pais in enumerate(ruta):
@@ -23,7 +25,8 @@ def dibujar_grafo(ruta, contenedor):
             fixedsize="true",
             style="filled",
             fillcolor=color,
-            color="#7A7A7A"
+            color="#7A7A7A",
+            fontcolor="#2563EB"
         )
     for i in range(len(ruta) - 1): dot.edge(f"n{i}", f"n{i + 1}")
     contenedor.graphviz_chart(dot)
