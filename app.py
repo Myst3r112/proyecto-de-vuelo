@@ -44,19 +44,7 @@ def aplicar_estilos():
         div[data-testid="stDialog"] div[role="dialog"] {
             width: min(760px, calc(100vw - 32px));
         }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-def mostrar_encabezado():
-    fondo = cargar_imagen("imagen/fondo.png")
-    st.markdown(
-        f"""
-        <div style="
-            background-image:
-                linear-gradient(rgba(15,23,42,0.7), rgba(30,64,175,0.7)),
-                url('data:image/png;base64,{fondo}');
+        div[data-testid="stHorizontalBlock"]:has(.encabezado-vuelos) {
             background-size: cover;
             background-position: center;
             padding: 28px;
@@ -64,17 +52,72 @@ def mostrar_encabezado():
             color: white;
             margin-bottom: 18px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-       ">
-            <h1 style="margin: 0; font-size: 32px;">
-                🛩️ Aerolineas Skibidis 🛩️
-            </h1>
-            <p style="margin: 8px 0 0 0; font-size: 16px;">
-                Proyecto de Matemática Discreta: análisis de rutas mediante matrices de conectividad y grafos.
-            </p>
-        </div>
+        }
+        div[data-testid="stHorizontalBlock"]:has(.encabezado-vuelos) div[data-testid="stVerticalBlock"] {
+            gap: 0.35rem;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.encabezado-vuelos) .stButton {
+            display: flex;
+            justify-content: flex-end;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.encabezado-vuelos) .stButton button {
+            width: min(190px, 100%);
+            border: 1px solid rgba(255,255,255,0.68);
+            background: rgba(255,255,255,0.16);
+            color: white;
+            font-weight: 700;
+            backdrop-filter: blur(6px);
+        }
+        div[data-testid="stHorizontalBlock"]:has(.encabezado-vuelos) .stCaptionContainer {
+            color: rgba(255,255,255,0.88);
+            text-align: right;
+        }
+        </style>
         """,
         unsafe_allow_html=True
     )
+
+def mostrar_encabezado():
+    fondo = cargar_imagen("imagen/fondo.png")
+    modo_actual = st.session_state.modo_app
+    modo_siguiente = "Admin" if modo_actual == "Usuario" else "Usuario"
+
+    st.markdown(
+        f"""
+        <style>
+        div[data-testid="stHorizontalBlock"]:has(.encabezado-vuelos) {{
+            background-image:
+                linear-gradient(rgba(15,23,42,0.7), rgba(30,64,175,0.7)),
+                url("data:image/png;base64,{fondo}");
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    titulo, selector = st.columns([4, 1.25], vertical_alignment="center")
+
+    with titulo:
+        st.markdown(
+            """
+            <div class="encabezado-vuelos">
+                <h1 style="margin: 0; font-size: 32px;">
+                    🛩️ Aerolineas Skibidis 🛩️
+                </h1>
+                <p style="margin: 8px 0 0 0; font-size: 16px;">
+                    Proyecto de Matemática Discreta: análisis de rutas mediante matrices de conectividad y grafos.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with selector:
+        if st.button(f"Cambiar a {modo_siguiente}", use_container_width=True):
+            st.session_state.modo_app = modo_siguiente
+            limpiar_busqueda()
+            st.rerun()
+        st.caption(f"Modo actual: {modo_actual}")
 
 def inicializar_estado():
     if "matriz" not in st.session_state: st.session_state.matriz = crear_matriz(len(paises))
@@ -85,6 +128,7 @@ def inicializar_estado():
     if "mensaje_agregar" not in st.session_state: st.session_state.mensaje_agregar = None
     if "digrafo_interno" not in st.session_state: st.session_state.digrafo_interno = construir_digrafo_interno(st.session_state.matriz)
     if "tarifa_confirmada" not in st.session_state: st.session_state.tarifa_confirmada = None
+    if "modo_app" not in st.session_state: st.session_state.modo_app = "Usuario"
 
 def limpiar_busqueda():
     st.session_state.resultado_busqueda = None
@@ -297,17 +341,21 @@ def mostrar_recomendaciones(recomendaciones, digrafo_interno):
 
 def main():
     aplicar_estilos()
-    mostrar_encabezado()
     inicializar_estado()
+    mostrar_encabezado()
     digrafo_interno = st.session_state.digrafo_interno
+    es_admin = st.session_state.modo_app == "Admin"
     
     columna_main, columna_panel = st.columns([2.2, 1], gap="large")
     with columna_main:
-        tabla1, tabla2, tabla3 = st.tabs([
-            "🔎 Buscar rutas",
-            "➕ Agregar ruta",
-            "📶 Matriz de conectividad"
-        ])
+        if es_admin:
+            tabla1, tabla2, tabla3 = st.tabs([
+                "🔎 Buscar rutas",
+                "➕ Agregar ruta",
+                "📶 Matriz de conectividad"
+            ])
+        else:
+            tabla1, = st.tabs(["🔎 Buscar rutas"])
 
         with tabla1:
             st.subheader("Buscar rutas entre países")
@@ -400,62 +448,63 @@ def main():
 
             if st.session_state.resultado_busqueda: mostrar_resultados(st.session_state.resultado_busqueda, digrafo_interno)
 
-        with tabla2:
-            st.subheader("Agregar nueva ruta aérea con escala")
+        if es_admin:
+            with tabla2:
+                st.subheader("Agregar nueva ruta aérea con escala")
 
-            if st.session_state.mensaje_agregar:
-                st.info(st.session_state.mensaje_agregar)
-                st.session_state.mensaje_agregar = None
+                if st.session_state.mensaje_agregar:
+                    st.info(st.session_state.mensaje_agregar)
+                    st.session_state.mensaje_agregar = None
 
-            bloque1, bloque2 = st.columns(2)
+                bloque1, bloque2 = st.columns(2)
 
-            with bloque1:
-                origen_nuevo = st.selectbox(
-                    "Origen",
-                    paises,
-                    index=None,
-                    placeholder="Ingrese un origen",
-                    key="origen_nuevo"
+                with bloque1:
+                    origen_nuevo = st.selectbox(
+                        "Origen",
+                        paises,
+                        index=None,
+                        placeholder="Ingrese un origen",
+                        key="origen_nuevo"
+                    )
+
+                with bloque2:
+                    destino_nuevo = st.selectbox(
+                        "Destino",
+                        paises,
+                        index=None,
+                        placeholder="Ingrese un destino",
+                        key="destino_nuevo"
+                    )
+
+                tipo_visual = st.radio(
+                    "Tipo de ruta que desea agregar",
+                    ["Con 1 escala", "Con 2 escalas"],
+                    horizontal=True
                 )
 
-            with bloque2:
-                destino_nuevo = st.selectbox(
-                    "Destino",
-                    paises,
-                    index=None,
-                    placeholder="Ingrese un destino",
-                    key="destino_nuevo"
+                if tipo_visual == "Con 1 escala":
+                    tipo_ruta_agregar = "una_escala"
+                else:
+                    tipo_ruta_agregar = "dos_escalas"
+
+                valido, mensaje = validar_origen_destino(origen_nuevo, destino_nuevo)
+
+                if not valido:
+                    st.warning(mensaje)
+                else:
+                    recomendaciones = cargar_recomendaciones(digrafo_interno, origen_nuevo, destino_nuevo, tipo_ruta=tipo_ruta_agregar)
+                    mostrar_recomendaciones(recomendaciones, digrafo_interno)
+
+            with tabla3:
+                st.subheader("Matriz de conectividad de vuelos directos")
+
+                df_matriz = pd.DataFrame(
+                    st.session_state.matriz,
+                    index=paises,
+                    columns=paises
                 )
 
-            tipo_visual = st.radio(
-                "Tipo de ruta que desea agregar",
-                ["Con 1 escala", "Con 2 escalas"],
-                horizontal=True
-            )
-
-            if tipo_visual == "Con 1 escala":
-                tipo_ruta_agregar = "una_escala"
-            else:
-                tipo_ruta_agregar = "dos_escalas"
-
-            valido, mensaje = validar_origen_destino(origen_nuevo, destino_nuevo)
-
-            if not valido:
-                st.warning(mensaje)
-            else:
-                recomendaciones = cargar_recomendaciones(digrafo_interno, origen_nuevo, destino_nuevo, tipo_ruta=tipo_ruta_agregar)
-                mostrar_recomendaciones(recomendaciones, digrafo_interno)
-
-        with tabla3:
-            st.subheader("Matriz de conectividad de vuelos directos")
-
-            df_matriz = pd.DataFrame(
-                st.session_state.matriz,
-                index=paises,
-                columns=paises
-            )
-
-            st.dataframe(df_matriz, use_container_width=True)
+                st.dataframe(df_matriz, use_container_width=True)
 
     with columna_panel:
         st.subheader("🧭 Visualización de la ruta")
