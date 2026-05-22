@@ -63,6 +63,21 @@ def cargar_recomendaciones(digrafo, origen, destino, *, tipo_ruta: str) -> list:
 
     for escala_A in paises:
         match tipo_ruta:
+            case "directa":
+                ruta = list([origen, destino])
+                if len(set(ruta)) != 2 : continue
+                if digrafo["aristas"][(origen, destino)]["existe"]: continue
+                _, distancia_total, limite = verificar_margen_desvio(digrafo, ruta)
+
+                recomendaciones.append({
+                    "mostrar": f"{origen} -> {destino}",
+                    "ruta": ruta,
+                    "distancia_total": distancia_total,
+                    "limite": limite,
+                    "conexiones_nuevas": ruta
+                })
+                break
+
             case "una_escala":
                 ruta = list([origen, escala_A, destino])
                 ruta_valida, _ = validar_ruta(ruta)
@@ -77,13 +92,14 @@ def cargar_recomendaciones(digrafo, origen, destino, *, tipo_ruta: str) -> list:
                 if not nuevas: continue
 
                 recomendaciones.append({
-                    "escala": escala_A,
+                    "mostrar": escala_A,
                     "ruta": ruta,
                     "distancia_total": distancia_total,
                     "limite": limite,
                     "conexiones_nuevas": nuevas
                 })
                 pass
+
             case "dos_escalas":
                 for escala_B in paises:
                     ruta = list([origen, escala_A, escala_B, destino])
@@ -98,7 +114,7 @@ def cargar_recomendaciones(digrafo, origen, destino, *, tipo_ruta: str) -> list:
 
                     if not nuevas: continue
                     recomendaciones.append({
-                        "escala": f"{escala_A} -> {escala_B}",
+                        "mostrar": f"{escala_A} -> {escala_B}",
                         "ruta": ruta,
                         "distancia_total": distancia_total,
                         "limite": limite,
@@ -110,7 +126,6 @@ def cargar_recomendaciones(digrafo, origen, destino, *, tipo_ruta: str) -> list:
     return recomendaciones[:10]
 
 def agregar_rutas_escalas(matriz, digrafo, ruta):
-    if len(ruta) not in (3, 4): return False, "La ruta debe tener una o dos escalas"
     valido, mensaje = validar_ruta(ruta)
 
     if not valido: return False, mensaje

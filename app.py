@@ -8,13 +8,13 @@ from busqueda import (
     buscar_rutas,
     validar_origen_destino,
     cargar_recomendaciones,
-    agregar_rutas_escalas,
+    agregar_rutas_escalas
 )
 from precios import (
     CLASES_TARIFA,
     calcular_comparacion_tarifas,
     calcular_precio_ruta,
-    formatear_monto,
+    formatear_monto
 )
 from visualizacion import dibujar_mapa, dibujar_grafo
 st.set_page_config(
@@ -144,7 +144,7 @@ def mostrar_mensaje_panel(texto):
             border-radius: 12px;
             text-align: center;
             font-weight: 600;
-            color: white;
+            color: whit e;
         ">
             {texto}
         </div>
@@ -309,13 +309,13 @@ def mostrar_recomendaciones(recomendaciones, digrafo_interno):
 
     for i, recomendacion in enumerate(recomendaciones):
         ruta = recomendacion["ruta"]
-        escala = recomendacion["escala"]
+        mostrar = recomendacion["mostrar"]
         distancia_total = recomendacion["distancia_total"]
         limite = recomendacion["limite"]
 
         with columnas[i % 2]:
             with st.container(border=True):
-                st.markdown(f"**{escala}**")
+                st.markdown(f"**{mostrar}**")
                 st.caption(f"Ruta: {' → '.join(ruta)}")
                 st.caption(f"Distancia: {distancia_total:.0f} km / Límite: {limite:.0f} km")
 
@@ -339,7 +339,7 @@ def mostrar_recomendaciones(recomendaciones, digrafo_interno):
 
                         st.rerun()
 
-def main():
+def main(): 
     aplicar_estilos()
     inicializar_estado()
     mostrar_encabezado()
@@ -349,107 +349,107 @@ def main():
     columna_main, columna_panel = st.columns([2.2, 1], gap="large")
     with columna_main:
         if es_admin:
-            tabla1, tabla2, tabla3 = st.tabs([
-                "🔎 Buscar rutas",
+            tabla1, tabla2= st.tabs([
                 "➕ Agregar ruta",
                 "📶 Matriz de conectividad"
             ])
         else:
             tabla1, = st.tabs(["🔎 Buscar rutas"])
-
-        with tabla1:
-            st.subheader("Buscar rutas entre países")
-
-            origen_actual = st.session_state.get("origen_busqueda")
-            destino_actual = st.session_state.get("destino_busqueda")
-
-            if destino_actual is not None: 
-                opciones_origen = calcular_origenes_destinos(
-                    st.session_state.matriz, 
-                    destino=destino_actual,
-                    digrafo=digrafo_interno
-                    )
-            else: opciones_origen = paises
-
-            if origen_actual is not None: 
-                opciones_destino = calcular_origenes_destinos(
-                    st.session_state.matriz, 
-                    origen=origen_actual,
-                    digrafo=digrafo_interno
-                    )
-            else: opciones_destino = paises
-
-            bloque1, bloque2 = st.columns(2)
-
-            with bloque1:
-                origen = st.selectbox(
-                    "País de origen",
-                    opciones_origen,
-                    index=None,
-                    placeholder="Ingrese un origen",
-                    key="origen_busqueda"
-                )
-
-            with bloque2:
-                destino = st.selectbox(
-                    "País de destino",
-                    opciones_destino,
-                    index=None,
-                    placeholder="Ingrese un destino",
-                    key="destino_busqueda"
-                )
-
-            if st.button("Buscar rutas", use_container_width=True):
-                valido, mensaje = validar_origen_destino(origen, destino)
-
-                if not valido:
-                    st.warning(mensaje)
-                    limpiar_busqueda()
-                else:
-                    analisis = analizar_conectividad_matricial(st.session_state.matriz, origen, destino)
-
-                    st.session_state.resultado_busqueda = {
-                        "analisis": analisis,
-                        "directas": buscar_rutas(
-                            analisis["A"],
-                            origen,
-                            destino,
-                            tipo_ruta="directa",
-                            digrafo=digrafo_interno
-                        ),
-                        "una_escala": buscar_rutas(
-                            analisis["A"],
-                            origen,
-                            destino,
-                            tipo_ruta="una_escala",
-                            digrafo=digrafo_interno
-                        ),
-                        "dos_escalas": buscar_rutas(
-                            analisis["A"],
-                            origen,
-                            destino,
-                            tipo_ruta="dos_escalas",
-                            digrafo=digrafo_interno
+        
+        if not es_admin:
+            with tabla1:
+                st.subheader("Buscar rutas entre países")
+    
+                origen_actual = st.session_state.get("origen_busqueda")
+                destino_actual = st.session_state.get("destino_busqueda")
+    
+                if destino_actual is not None: 
+                    opciones_origen = calcular_origenes_destinos(
+                        st.session_state.matriz, 
+                        destino=destino_actual,
+                        digrafo=digrafo_interno
                         )
-                    }
-                    st.session_state.ruta_seleccionada = None
-                    st.session_state.tarifa_confirmada = None
-
-            if st.session_state.tarifa_confirmada:
-                tarifa = st.session_state.tarifa_confirmada
-                st.success(
-                    "Tarifa confirmada: "
-                    f"{' → '.join(tarifa['ruta'])} | "
-                    f"{tarifa['tipo_viaje']} | "
-                    f"{tarifa['clase']} | "
-                    f"{tarifa['pasajeros']} pasajero(s) | "
-                    f"{formatear_monto(tarifa['total_usd'], 'USD')}"
-                )
-
-            if st.session_state.resultado_busqueda: mostrar_resultados(st.session_state.resultado_busqueda, digrafo_interno)
+                else: opciones_origen = paises
+    
+                if origen_actual is not None: 
+                    opciones_destino = calcular_origenes_destinos(
+                        st.session_state.matriz, 
+                        origen=origen_actual,
+                        digrafo=digrafo_interno
+                        )
+                else: opciones_destino = paises
+    
+                bloque1, bloque2 = st.columns(2)
+    
+                with bloque1:
+                    origen = st.selectbox(
+                        "País de origen",
+                        opciones_origen,
+                        index=None,
+                        placeholder="Ingrese un origen",
+                        key="origen_busqueda"
+                    )
+    
+                with bloque2:
+                    destino = st.selectbox(
+                        "País de destino",
+                        opciones_destino,
+                        index=None,
+                        placeholder="Ingrese un destino",
+                        key="destino_busqueda"
+                    )
+    
+                if st.button("Buscar rutas", use_container_width=True):
+                    valido, mensaje = validar_origen_destino(origen, destino)
+    
+                    if not valido:
+                        st.warning(mensaje)
+                        limpiar_busqueda()
+                    else:
+                        analisis = analizar_conectividad_matricial(st.session_state.matriz, origen, destino)
+    
+                        st.session_state.resultado_busqueda = {
+                            "analisis": analisis,
+                            "directas": buscar_rutas(
+                                analisis["A"],
+                                origen,
+                                destino,
+                                tipo_ruta="directa",
+                                digrafo=digrafo_interno
+                            ),
+                            "una_escala": buscar_rutas(
+                                analisis["A"],
+                                origen,
+                                destino,
+                                tipo_ruta="una_escala",
+                                digrafo=digrafo_interno
+                            ),
+                            "dos_escalas": buscar_rutas(
+                                analisis["A"],
+                                origen,
+                                destino,
+                                tipo_ruta="dos_escalas",
+                                digrafo=digrafo_interno
+                            )
+                        }
+                        st.session_state.ruta_seleccionada = None
+                        st.session_state.tarifa_confirmada = None
+    
+                if st.session_state.tarifa_confirmada:
+                    tarifa = st.session_state.tarifa_confirmada
+                    st.success(
+                        "Tarifa confirmada: "
+                        f"{' → '.join(tarifa['ruta'])} | "
+                        f"{tarifa['tipo_viaje']} | "
+                        f"{tarifa['clase']} | "
+                        f"{tarifa['pasajeros']} pasajero(s) | "
+                        f"{formatear_monto(tarifa['total_usd'], 'USD')}"
+                    )
+    
+                if st.session_state.resultado_busqueda: mostrar_resultados(st.session_state.resultado_busqueda, digrafo_interno)
 
         if es_admin:
-            with tabla2:
+            with tabla1:
                 st.subheader("Agregar nueva ruta aérea con escala")
 
                 if st.session_state.mensaje_agregar:
@@ -478,14 +478,13 @@ def main():
 
                 tipo_visual = st.radio(
                     "Tipo de ruta que desea agregar",
-                    ["Con 1 escala", "Con 2 escalas"],
+                    ["Directa", "Con 1 escala", "Con 2 escalas"],
                     horizontal=True
                 )
 
-                if tipo_visual == "Con 1 escala":
-                    tipo_ruta_agregar = "una_escala"
-                else:
-                    tipo_ruta_agregar = "dos_escalas"
+                if tipo_visual == "Directa": tipo_ruta_agregar = "directa"
+                if tipo_visual == "Con 1 escala": tipo_ruta_agregar = "una_escala"
+                if tipo_visual == "Con 2 escalas": tipo_ruta_agregar = "dos_escalas"
 
                 valido, mensaje = validar_origen_destino(origen_nuevo, destino_nuevo)
 
@@ -495,8 +494,8 @@ def main():
                     recomendaciones = cargar_recomendaciones(digrafo_interno, origen_nuevo, destino_nuevo, tipo_ruta=tipo_ruta_agregar)
                     mostrar_recomendaciones(recomendaciones, digrafo_interno)
 
-            with tabla3:
-                st.subheader("Matriz de conectividad de vuelos directos")
+            with tabla2:
+                st.subheader("Matriz de conectividad de vuelos")
 
                 df_matriz = pd.DataFrame(
                     st.session_state.matriz,
@@ -505,6 +504,10 @@ def main():
                 )
 
                 st.dataframe(df_matriz, use_container_width=True)
+                
+                st.divider()
+                st.subheader("Mapa con digrafo dirigido")
+                dibujar_mapa(st, digrafo=st.session_state.digrafo_interno)
 
     with columna_panel:
         st.subheader("🧭 Visualización de la ruta")
