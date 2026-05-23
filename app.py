@@ -20,7 +20,7 @@ from precios import (
 )
 from visualizacion import dibujar_mapa, dibujar_grafo
 st.set_page_config(
-    page_title='Aerolineas Skibidi',
+    page_title='Terra Airline',
     page_icon="🛩️",
     layout="wide"
 )
@@ -104,7 +104,7 @@ def mostrar_encabezado():
             """
             <div class="encabezado-vuelos">
                 <h1 style="margin: 0; font-size: 32px;">
-                    🛩️ Aerolineas Skibidis 🛩️
+                    🛩️ Aerolineas Terra 🛩️
                 </h1>
                 <p style="margin: 8px 0 0 0; font-size: 16px;">
                     Proyecto de Matemática Discreta: análisis de rutas mediante matrices de conectividad y grafos.

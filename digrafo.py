@@ -45,7 +45,30 @@ def verificar_margen_desvio(digrafo, ruta, *, margen: float = MARGEN_DESVIO):
     distancia_directa = digrafo["aristas"][(origen, destino)]["distancia"]
     distancia_total = calcular_distancia_ruta(digrafo, ruta)
     limite = distancia_directa * (1 + margen)
-    return distancia_total <= limite, distancia_total, limite
+
+    if distancia_total > limite:
+        return False, distancia_total, limite
+
+    for i in range(len(ruta) - 1):
+        actual = ruta[i]
+        siguiente = ruta[i + 1]
+
+        distancia_actual_destino = digrafo["aristas"][(actual, destino)]["distancia"]
+        distancia_siguiente_destino = 0 if siguiente == destino else digrafo["aristas"][(siguiente, destino)]["distancia"]
+
+        if distancia_siguiente_destino >= distancia_actual_destino:
+            return False, distancia_total, limite
+
+    for escala in ruta[1:-1]:
+        distancia_con_escala = (
+            digrafo["aristas"][(origen, escala)]["distancia"] +
+            digrafo["aristas"][(escala, destino)]["distancia"]
+        )
+
+        if distancia_con_escala > limite:
+            return False, distancia_total, limite
+
+    return True, distancia_total, limite
 
 def recorrer_ruta_paises_pares(digrafo, ruta, *, funcion: str):
     nuevas = list()
