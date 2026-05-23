@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pandas as pd
 import streamlit as st
 from utils import cargar_imagen
@@ -129,6 +131,7 @@ def inicializar_estado():
     if "digrafo_interno" not in st.session_state: st.session_state.digrafo_interno = construir_digrafo_interno(st.session_state.matriz)
     if "tarifa_confirmada" not in st.session_state: st.session_state.tarifa_confirmada = None
     if "modo_app" not in st.session_state: st.session_state.modo_app = "Usuario"
+    if "historial_compras" not in st.session_state: st.session_state.historial_compras = list()
 
 def limpiar_busqueda():
     st.session_state.resultado_busqueda = None
@@ -144,7 +147,7 @@ def mostrar_mensaje_panel(texto):
             border-radius: 12px;
             text-align: center;
             font-weight: 600;
-            color: whit e;
+            color: white;
         ">
             {texto}
         </div>
@@ -154,6 +157,81 @@ def mostrar_mensaje_panel(texto):
 
 def seleccionar_ruta_para_cotizar(ruta):
     st.session_state.ruta_seleccionada = ruta
+
+def registrar_compra(precio):
+    compra = {
+        "fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "ruta": " → ".join(precio["ruta"]),
+        "tipo_viaje": precio["tipo_viaje"],
+        "clase": precio["clase"],
+        "pasajeros": precio["pasajeros"],
+        "subtotal_persona_usd": precio["subtotal_persona_usd"],
+        "impuesto_persona_usd": precio["impuesto_persona_usd"],
+        "tasa_aeropuerto_persona_usd": precio["tasa_aeropuerto_persona_usd"],
+        "total_persona_usd": precio["total_persona_usd"],
+        "total_usd": precio["total_usd"],
+        "total_pen": precio["total_pen"],
+    }
+
+    st.session_state.historial_compras.append(compra)
+    st.session_state.tarifa_confirmada = compra
+
+def mostrar_historial_compras():
+    st.subheader("Historial de compras")
+
+    historial = st.session_state.historial_compras
+
+    if not historial:
+        st.info("Aún no hay compras registradas en esta sesión.")
+        return
+
+    total_usd = sum(compra["total_usd"] for compra in historial)
+    total_pasajeros = sum(compra["pasajeros"] for compra in historial)
+
+    dato1, dato2, dato3 = st.columns(3)
+
+    with dato1:
+        st.metric("Compras", len(historial))
+    with dato2:
+        st.metric("Pasajeros", total_pasajeros)
+    with dato3:
+        st.metric("Total comprado", formatear_monto(total_usd, "USD"))
+
+    filas = []
+
+    for compra in reversed(historial):
+        filas.append({
+            "Fecha": compra["fecha"],
+            "Ruta": compra["ruta"],
+            "Viaje": compra["tipo_viaje"],
+            "Clase": compra["clase"],
+            "Pasajeros": compra["pasajeros"],
+            "Por pasajero": formatear_monto(compra["total_persona_usd"], "USD"),
+            "Total USD": formatear_monto(compra["total_usd"], "USD"),
+            "Total PEN": formatear_monto(compra["total_pen"], "PEN"),
+        })
+
+    st.dataframe(pd.DataFrame(filas), use_container_width=True, hide_index=True)
+
+    with st.expander("Ver desglose de tasas por pasajero"):
+        detalle = []
+
+        for compra in reversed(historial):
+            detalle.append({
+                "Fecha": compra["fecha"],
+                "Ruta": compra["ruta"],
+                "Subtotal": formatear_monto(compra["subtotal_persona_usd"], "USD"),
+                "Impuesto 18%": formatear_monto(compra["impuesto_persona_usd"], "USD"),
+                "Tasa aeropuerto fija": formatear_monto(compra["tasa_aeropuerto_persona_usd"], "USD"),
+                "Total por pasajero": formatear_monto(compra["total_persona_usd"], "USD"),
+            })
+
+        st.dataframe(pd.DataFrame(detalle), use_container_width=True, hide_index=True)
+
+    if st.button("Vaciar historial", use_container_width=True):
+        st.session_state.historial_compras = list()
+        st.session_state.tarifa_confirmada = None
+        st.rerun()
 
 def mostrar_tarjetas_rutas(titulo, rutas, digrafo_interno):
     if not rutas: return
@@ -266,7 +344,10 @@ def mostrar_contenido_cotizacion(ruta, digrafo_interno):
 
     with por_persona:
         st.metric("Por pasajero", formatear_monto(precio["total_persona_usd"], "USD"))
-        st.caption(f"Tasas: {formatear_monto(precio['tasas_persona_usd'], 'USD')}")
+        st.caption(
+            f"Impuesto 18%: {formatear_monto(precio['impuesto_persona_usd'], 'USD')} | "
+            f"Tasa fija: {formatear_monto(precio['tasa_aeropuerto_persona_usd'], 'USD')}"
+        )
 
     with distancia:
         st.metric("Distancia", f"{precio['distancia_total']:.0f} km")
@@ -283,15 +364,8 @@ def mostrar_contenido_cotizacion(ruta, digrafo_interno):
 
     confirmar, cerrar = st.columns(2)
     with confirmar:
-        if st.button("Confirmar tarifa", use_container_width=True):
-            st.session_state.tarifa_confirmada = {
-                "ruta": ruta,
-                "tipo_viaje": seleccion_viaje,
-                "clase": clase,
-                "pasajeros": cantidad_pasajeros,
-                "total_usd": precio["total_usd"],
-                "total_pen": precio["total_pen"],
-            }
+        if st.button("Comprar boleto", use_container_width=True):
+            registrar_compra(precio)
             st.rerun()
 
     with cerrar:
@@ -354,7 +428,7 @@ def main():
                 "📶 Matriz de conectividad"
             ])
         else:
-            tabla1, = st.tabs(["🔎 Buscar rutas"])
+            tabla1, tabla2 = st.tabs(["🔎 Buscar rutas", "🧾 Historial"])
         
         if not es_admin:
             with tabla1:
@@ -438,8 +512,8 @@ def main():
                 if st.session_state.tarifa_confirmada:
                     tarifa = st.session_state.tarifa_confirmada
                     st.success(
-                        "Tarifa confirmada: "
-                        f"{' → '.join(tarifa['ruta'])} | "
+                        "Compra registrada: "
+                        f"{tarifa['ruta']} | "
                         f"{tarifa['tipo_viaje']} | "
                         f"{tarifa['clase']} | "
                         f"{tarifa['pasajeros']} pasajero(s) | "
@@ -447,6 +521,9 @@ def main():
                     )
     
                 if st.session_state.resultado_busqueda: mostrar_resultados(st.session_state.resultado_busqueda, digrafo_interno)
+
+            with tabla2:
+                mostrar_historial_compras()
 
         if es_admin:
             with tabla1:

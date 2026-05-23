@@ -20,7 +20,8 @@ TIPOS_VIAJE = {
     "Ida y vuelta": 1.88,
 }
 
-TASA_SERVICIO = 0.18
+IMPUESTO_PORCENTUAL = 0.18
+TASA_AEROPUERTO_PERSONA_USD = 30.24
 CAMBIO_PEN = 3.42
 
 def formatear_monto(monto, moneda="USD"):
@@ -34,7 +35,9 @@ def calcular_precio_ruta(digrafo, ruta, *, tipo_viaje, clase, pasajeros):
 
     base_por_persona = 42 + (distancia_total * 0.035) + (segmentos * 9) + (escalas * 12)
     subtotal_persona = base_por_persona * TIPOS_VIAJE[tipo_viaje] * CLASES_TARIFA[clase]["multiplicador"]
-    tasas_persona = subtotal_persona * TASA_SERVICIO
+    impuesto_persona = subtotal_persona * IMPUESTO_PORCENTUAL
+    tasa_aeropuerto_persona = TASA_AEROPUERTO_PERSONA_USD
+    tasas_persona = impuesto_persona + tasa_aeropuerto_persona
     total_persona_usd = subtotal_persona + tasas_persona
     total_usd = total_persona_usd * pasajeros
 
@@ -47,6 +50,9 @@ def calcular_precio_ruta(digrafo, ruta, *, tipo_viaje, clase, pasajeros):
         "segmentos": segmentos,
         "escalas": escalas,
         "subtotal_persona_usd": subtotal_persona,
+        "impuesto_porcentual": IMPUESTO_PORCENTUAL,
+        "impuesto_persona_usd": impuesto_persona,
+        "tasa_aeropuerto_persona_usd": tasa_aeropuerto_persona,
         "tasas_persona_usd": tasas_persona,
         "total_persona_usd": total_persona_usd,
         "total_usd": total_usd,

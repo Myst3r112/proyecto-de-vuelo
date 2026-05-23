@@ -74,7 +74,7 @@ def cargar_recomendaciones(digrafo, origen, destino, *, tipo_ruta: str) -> list:
                     "ruta": ruta,
                     "distancia_total": distancia_total,
                     "limite": limite,
-                    "conexiones_nuevas": ruta
+                    "conexiones_nuevas": [(origen, destino)]
                 })
                 break
 
@@ -139,8 +139,10 @@ def agregar_rutas_escalas(matriz, digrafo, ruta):
         fila = paises.index(origen)
         columna = paises.index(destino)
 
-        matriz[fila][columna] = 1
+        matriz[fila, columna] = 1
+        matriz[columna, fila] = 1
         digrafo["aristas"][(origen, destino)]["existe"] = True
+        digrafo["aristas"][(destino, origen)]["existe"] = True
 
     texto_ruta = " -> ".join(ruta)
     return True, f"Ruta agregada correctamente: {texto_ruta}"

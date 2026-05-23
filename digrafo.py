@@ -30,7 +30,7 @@ def construir_digrafo_interno(matriz):
                 "coordenada_origen": coordenada_origen,
                 "coordenada_destino": coordenada_destino,
                 "distancia": distancia,
-                "existe": matriz[i][j] == 1
+                "existe": bool(matriz[i][j] == 1)
             }
     return digrafo
 
