@@ -1,7 +1,8 @@
 from graphviz import Digraph
 import pydeck as pdk
-from utils import interpolar_color 
-from data import *
+from src.utils import interpolar_color 
+from src.data import *
+
 def dibujar_grafo(ruta, contenedor):
     dot = Digraph()
     dot.attr("graph", bgcolor="transparent")

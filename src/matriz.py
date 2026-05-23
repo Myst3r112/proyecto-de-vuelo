@@ -1,6 +1,6 @@
 import numpy as np
-from data import *
-from busqueda import buscar_rutas
+from src.data import *
+from src.busqueda import buscar_rutas
 
 def crear_matriz(dimension) -> np.ndarray:
     matriz = np.zeros((dimension, dimension), dtype=int)

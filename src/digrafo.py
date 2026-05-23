@@ -1,5 +1,5 @@
-from data import * 
-from utils import formula_haversine
+from src.data import *
+from src.utils import formula_haversine
 
 def construir_digrafo_interno(matriz):
     digrafo = {

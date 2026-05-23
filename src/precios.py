@@ -1,4 +1,4 @@
-from digrafo import calcular_distancia_ruta
+from src.digrafo import calcular_distancia_ruta
 
 CLASES_TARIFA = {
     "Standard": {

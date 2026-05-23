@@ -1,6 +1,6 @@
 import numpy as np
-from digrafo import verificar_margen_desvio, recorrer_ruta_paises_pares
-from data import *
+from src.digrafo import verificar_margen_desvio, recorrer_ruta_paises_pares
+from src.data import *
 
 def validar_origen_destino(origen, destino):
     if origen is None and destino is None: return False, "Selecciona un pais de origen y destino"

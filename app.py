@@ -2,23 +2,23 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
-from utils import cargar_imagen
-from data import paises
-from matriz import crear_matriz, calcular_origenes_destinos, analizar_conectividad_matricial
-from digrafo import construir_digrafo_interno
-from busqueda import (
+from src.utils import cargar_imagen
+from src.data import paises
+from src.matriz import crear_matriz, calcular_origenes_destinos, analizar_conectividad_matricial
+from src.digrafo import construir_digrafo_interno
+from src.busqueda import (
     buscar_rutas,
     validar_origen_destino,
     cargar_recomendaciones,
     agregar_rutas_escalas
 )
-from precios import (
+from src.precios import (
     CLASES_TARIFA,
     calcular_comparacion_tarifas,
     calcular_precio_ruta,
     formatear_monto
 )
-from visualizacion import dibujar_mapa, dibujar_grafo
+from src.visualizacion import dibujar_mapa, dibujar_grafo
 st.set_page_config(
     page_title='Terra Airline',
     page_icon="🛩️",
