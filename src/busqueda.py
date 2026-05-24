@@ -125,7 +125,7 @@ def cargar_recomendaciones(digrafo, origen, destino, *, tipo_ruta: str) -> list:
     recomendaciones.sort(key=lambda x: x["distancia_total"])
     return recomendaciones[:10]
 
-def agregar_rutas_escalas(matriz, digrafo, ruta):
+def agregar_conexiones(matriz, digrafo, ruta):
     valido, mensaje = validar_ruta(ruta)
 
     if not valido: return False, mensaje

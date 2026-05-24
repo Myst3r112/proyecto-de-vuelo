@@ -54,40 +54,30 @@ def calcular_origenes_destinos(matriz, *, origen=None, destino=None, digrafo=Non
     if origen is not None:
         for posible_destino in paises:
             if posible_destino == origen: continue
-
             rutas = buscar_rutas(A, origen, posible_destino, tipo_ruta="directa", digrafo=digrafo)
             if rutas:
                 opciones.add(posible_destino)
                 continue
-
             rutas = buscar_rutas(A, origen, posible_destino, tipo_ruta="una_escala", digrafo=digrafo)
             if rutas:
                 opciones.add(posible_destino)
                 continue
-
             rutas = buscar_rutas(A, origen, posible_destino, tipo_ruta="dos_escalas", digrafo=digrafo)
             if rutas:
                 opciones.add(posible_destino)
-
     elif destino is not None:
         for posible_origen in paises:
             if posible_origen == destino: continue
-
             rutas = buscar_rutas(A, posible_origen, destino, tipo_ruta="directa", digrafo=digrafo)
             if rutas:
                 opciones.add(posible_origen)
                 continue
-
             rutas = buscar_rutas(A, posible_origen, destino, tipo_ruta="una_escala", digrafo=digrafo)
             if rutas:
                 opciones.add(posible_origen)
                 continue
-
             rutas = buscar_rutas(A, posible_origen, destino, tipo_ruta="dos_escalas", digrafo=digrafo)
             if rutas:
                 opciones.add(posible_origen)
-
-    else:
-        return list(paises)
-
+    else: return list(paises)
     return sorted(list(opciones))

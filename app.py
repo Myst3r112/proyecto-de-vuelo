@@ -1,16 +1,20 @@
 from datetime import datetime
-
 import pandas as pd
 import streamlit as st
 from src.utils import cargar_imagen
 from src.data import paises
-from src.matriz import crear_matriz, calcular_origenes_destinos, analizar_conectividad_matricial
+from src.matriz import (
+    crear_matriz, 
+    calcular_origenes_destinos,
+    analizar_conectividad_matricial
+)
 from src.digrafo import construir_digrafo_interno
 from src.busqueda import (
     buscar_rutas,
     validar_origen_destino,
     cargar_recomendaciones,
-    agregar_rutas_escalas
+    agregar_conexiones
+    
 )
 from src.precios import (
     CLASES_TARIFA,
@@ -155,9 +159,6 @@ def mostrar_mensaje_panel(texto):
         unsafe_allow_html=True
     )
 
-def seleccionar_ruta_para_cotizar(ruta):
-    st.session_state.ruta_seleccionada = ruta
-
 def registrar_compra(precio):
     compra = {
         "fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -256,7 +257,7 @@ def mostrar_tarjetas_rutas(titulo, rutas, digrafo_interno):
 
             with boton_elegir:
                 if st.button("Elegir ruta", use_container_width=True, key=f"elegir_busqueda_{titulo}_{i}"):
-                    seleccionar_ruta_para_cotizar(ruta)
+                    st.session_state.ruta_seleccionada = ruta
                     mostrar_contenido_cotizacion(ruta, digrafo_interno)
 
             with detalle_ruta:
@@ -294,7 +295,8 @@ def mostrar_resultados(resultado, digrafo_interno):
     mostrar_tarjetas_rutas("### 🛫 Rutas con 1 escala", resultado["una_escala"], digrafo_interno)
     mostrar_tarjetas_rutas("### 🛬 Rutas con 2 escalas", resultado["dos_escalas"], digrafo_interno)
 
-    if not (resultado["directas"] or resultado["una_escala"] or resultado["dos_escalas"]): st.info("La matriz detectó conectividad, pero no se encontraron rutas válidas sin repetir países.")
+    if not (resultado["directas"] or resultado["una_escala"] or resultado["dos_escalas"]): 
+        st.info("La matriz detectó conectividad, pero no se encontraron rutas válidas sin repetir países.")
 
 @st.dialog("Elegir ruta y tarifa")
 def mostrar_contenido_cotizacion(ruta, digrafo_interno):
@@ -403,7 +405,7 @@ def mostrar_recomendaciones(recomendaciones, digrafo_interno):
 
                 with boton2:
                     if st.button("Agregar ruta", use_container_width=True, key=f"agregar_{i}_{'_'.join(ruta)}"):
-                        agregado, mensaje = agregar_rutas_escalas(st.session_state.matriz, digrafo_interno, ruta)
+                        agregado, mensaje = agregar_conexiones(st.session_state.matriz, digrafo_interno, ruta)
 
                         st.session_state.mensaje_agregar = mensaje
 

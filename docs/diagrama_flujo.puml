@@ -1,0 +1,77 @@
+@startuml
+title Diagrama de flujo - Aerolineas Terra
+
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+  BackgroundColor #EAF2FF
+  BorderColor #1E3A8A
+  FontColor #0F172A
+  DiamondBackgroundColor #FFF7D6
+  DiamondBorderColor #B45309
+  StartColor #16A34A
+  EndColor #DC2626
+}
+
+start
+:Ingresar a Aerolineas Terra;
+:Elegir modo de uso;
+
+if (Modo seleccionado) then (Usuario)
+  partition "Usuario" {
+    :Seleccionar seccion;
+
+    if (Seccion seleccionada) then (Buscar rutas)
+      :Seleccionar origen y destino;
+      :Buscar rutas disponibles;
+
+      if (Hay rutas?) then (Si)
+        :Mostrar rutas encontradas;
+        :Elegir una ruta;
+        :Ver ruta en mapa y grafo;
+        :Cotizar boleto;
+
+        if (Confirma compra?) then (Si)
+          :Registrar compra;
+        else (No)
+          :Volver a resultados;
+        endif
+      else (No)
+        :Mostrar mensaje sin rutas;
+      endif
+    else (Historial)
+      :Mostrar historial de compras;
+
+      if (Desea eliminar historial?) then (Si)
+        :Vaciar historial;
+      else (No)
+        :Conservar historial;
+      endif
+    endif
+  }
+else (Administrador)
+  partition "Administrador" {
+    :Seleccionar seccion;
+
+    if (Seccion seleccionada) then (Agregar ruta)
+      :Seleccionar origen y destino;
+      :Elegir tipo de ruta;
+      :Buscar recomendaciones;
+
+      if (Hay recomendaciones?) then (Si)
+        :Mostrar rutas recomendadas;
+        :Visualizar ruta;
+        :Agregar conexion;
+        :Actualizar matriz y mapa;
+      else (No)
+        :Mostrar mensaje sin recomendaciones;
+      endif
+    else (Matriz de conectividad)
+      :Mostrar matriz de conectividad;
+      :Mostrar mapa de digrafo bidireccional;
+    endif
+  }
+endif
+
+:Actualizar panel de visualizacion;
+stop
+@enduml
