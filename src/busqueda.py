@@ -146,3 +146,4 @@ def agregar_conexiones(matriz, digrafo, ruta):
 
     texto_ruta = " -> ".join(ruta)
     return True, f"Ruta agregada correctamente: {texto_ruta}"
+
